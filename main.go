@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/miekg/vks/systemd"
@@ -16,5 +17,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.printf("%+v\n", pods)
+	fmt.Printf("%+v\n", pods)
 }
