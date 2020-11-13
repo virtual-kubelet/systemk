@@ -14,7 +14,7 @@
 
 // Modified for use here by Miek Gieben.
 
-package systemd
+package manager
 
 import (
 	"fmt"
