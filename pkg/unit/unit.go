@@ -193,6 +193,7 @@ func HashFromHexString(key string) (Hash, error) {
 	return h, nil
 }
 
+// TODO: remove, just use dbus state. We may need to hash it though? Not sure?
 // UnitState encodes the current state of a unit loaded into a fleet agent
 type UnitState struct {
 	LoadState   string

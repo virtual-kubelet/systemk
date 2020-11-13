@@ -24,12 +24,13 @@ import (
 	"path"
 	"sync"
 
-	"github.com/coreos/go-systemd/dbus"
+	"github.com/miekg/go-systemd/dbus"
 	"github.com/miekg/vks/pkg/set"
 	"github.com/miekg/vks/pkg/unit"
 )
 
-type systemdUnitManager struct {
+// UnitManager manages units via a dBus connection to systemd.
+type UnitManager struct {
 	systemd  *dbus.Conn
 	unitsDir string
 
@@ -37,7 +38,7 @@ type systemdUnitManager struct {
 	mutex  sync.RWMutex
 }
 
-func NewSystemdUnitManager(uDir string, systemdUser bool) (*systemdUnitManager, error) {
+func New(uDir string, systemdUser bool) (*UnitManager, error) {
 	var systemd *dbus.Conn
 	var err error
 	if systemdUser {
@@ -58,7 +59,7 @@ func NewSystemdUnitManager(uDir string, systemdUser bool) (*systemdUnitManager, 
 		return nil, err
 	}
 
-	mgr := systemdUnitManager{
+	mgr := UnitManager{
 		systemd:  systemd,
 		unitsDir: uDir,
 		hashes:   hashes,
@@ -102,7 +103,7 @@ func hashUnitFile(loc string) (unit.Hash, error) {
 
 // Load writes the given Unit to disk, subscribing to relevant dbus
 // events and caching the Unit's Hash.
-func (m *systemdUnitManager) Load(name string, u unit.UnitFile) error {
+func (m *UnitManager) Load(name string, u unit.UnitFile) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	err := m.writeUnit(name, u.String())
@@ -122,7 +123,7 @@ func (m *systemdUnitManager) Load(name string, u unit.UnitFile) error {
 
 // Unload removes the indicated unit from the filesystem, deletes its
 // associated Hash from the cache and clears its unit status in systemd
-func (m *systemdUnitManager) Unload(name string) error {
+func (m *UnitManager) Unload(name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	delete(m.hashes, name)
@@ -131,7 +132,7 @@ func (m *systemdUnitManager) Unload(name string) error {
 
 // TriggerStart asynchronously starts the unit identified by the given name.
 // This function does not block for the underlying unit to actually start.
-func (m *systemdUnitManager) TriggerStart(name string) error {
+func (m *UnitManager) TriggerStart(name string) error {
 	jobID, err := m.systemd.StartUnit(name, "replace", nil)
 	if err != nil {
 		return err
@@ -142,8 +143,8 @@ func (m *systemdUnitManager) TriggerStart(name string) error {
 
 // TriggerStop asynchronously starts the unit identified by the given name.
 // This function does not block for the underlying unit to actually stop.
-func (m *systemdUnitManager) TriggerStop(name string) error {
-	jobID, err := m.systemd.StopUnit(name, "replace", nil)
+func (m *UnitManager) TriggerStop(name string) error {
+	_, err := m.systemd.StopUnit(name, "replace", nil)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func (m *systemdUnitManager) TriggerStop(name string) error {
 
 // GetUnitState generates a UnitState object representing the
 // current state of a Unit
-func (m *systemdUnitManager) GetUnitState(name string) (*unit.UnitState, error) {
+func (m *UnitManager) GetUnitState(name string) (*unit.UnitState, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	us, err := m.getUnitState(name)
@@ -165,7 +166,7 @@ func (m *systemdUnitManager) GetUnitState(name string) (*unit.UnitState, error) 
 	return us, nil
 }
 
-func (m *systemdUnitManager) getUnitState(name string) (*unit.UnitState, error) {
+func (m *UnitManager) getUnitState(name string) (*unit.UnitState, error) {
 	info, err := m.systemd.GetUnitProperties(name)
 	if err != nil {
 		return nil, err
@@ -178,7 +179,7 @@ func (m *systemdUnitManager) getUnitState(name string) (*unit.UnitState, error) 
 	return &us, nil
 }
 
-func (m *systemdUnitManager) readUnit(name string) (string, error) {
+func (m *UnitManager) readUnit(name string) (string, error) {
 	path := m.getUnitFilePath(name)
 	contents, err := ioutil.ReadFile(path)
 	if err == nil {
@@ -187,19 +188,17 @@ func (m *systemdUnitManager) readUnit(name string) (string, error) {
 	return "", fmt.Errorf("no unit file at local path %s", path)
 }
 
-func (m *systemdUnitManager) ReloadUnitFiles() error {
-	log.Printf("Instructing systemd to reload units")
-	return m.systemd.Reload()
-}
+func (m *UnitManager) ReloadUnitFiles() error { return m.systemd.Reload() }
 
 // Units enumerates all files recognized as valid systemd units in
 // this manager's units directory.
-func (m *systemdUnitManager) Units() ([]string, error) {
-	return lsUnitsDir(m.unitsDir)
+func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) }
 
+func (m *UnitManager) ListUnits() ([]dbus.UnitStatus, error) {
+	return m.systemd.ListUnits()
 }
 
-func (m *systemdUnitManager) GetUnitStates(filter set.Set) (map[string]*unit.UnitState, error) {
+func (m *UnitManager) GetUnitStates(filter set.Set) (map[string]*unit.UnitState, error) {
 	// Unfortunately we need to lock for the entire operation to ensure we
 	// have a consistent view of the hashes. Otherwise, Load/Unload
 	// operations could mutate the hashes before we've retrieved the state
@@ -212,6 +211,7 @@ func (m *systemdUnitManager) GetUnitStates(filter set.Set) (map[string]*unit.Uni
 	dbusStatuses, err := m.systemd.ListUnitsByNames(filter.Values())
 
 	if err != nil {
+		println("ListUnits")
 		fallback = true
 		dbusStatuses, err = m.systemd.ListUnits()
 		if err != nil {
@@ -259,7 +259,7 @@ func (m *systemdUnitManager) GetUnitStates(filter set.Set) (map[string]*unit.Uni
 	return states, nil
 }
 
-func (m *systemdUnitManager) writeUnit(name string, contents string) error {
+func (m *UnitManager) writeUnit(name string, contents string) error {
 	bContents := []byte(contents)
 	log.Printf("Writing systemd unit %s (%db)", name, len(bContents))
 
@@ -273,7 +273,7 @@ func (m *systemdUnitManager) writeUnit(name string, contents string) error {
 	return err
 }
 
-func (m *systemdUnitManager) enableUnit(name string) (bool, error) {
+func (m *UnitManager) enableUnit(name string) (bool, error) {
 	log.Printf("Enabling systemd unit %s", name)
 
 	ufPath := m.getUnitFilePath(name)
@@ -282,7 +282,7 @@ func (m *systemdUnitManager) enableUnit(name string) (bool, error) {
 	return ok, err
 }
 
-func (m *systemdUnitManager) removeUnit(name string) (err error) {
+func (m *UnitManager) removeUnit(name string) (err error) {
 	log.Printf("Removing systemd unit %s", name)
 
 	// both DisableUnitFiles() and ResetFailedUnit() must be followed by
@@ -309,7 +309,7 @@ func (m *systemdUnitManager) removeUnit(name string) (err error) {
 	return err
 }
 
-func (m *systemdUnitManager) getUnitFilePath(name string) string {
+func (m *UnitManager) getUnitFilePath(name string) string {
 	return path.Join(m.unitsDir, name)
 }
 
@@ -331,7 +331,7 @@ func lsUnitsDir(dir string) ([]string, error) {
 // The returned file names are relative to the directory argument.
 // filterFunc is called once for each file found in the directory. If
 // filterFunc returns true, the given file will ignored.
-func ListDirectory(dir string, filterFunc func(string) bool) ([]string, error) {
+func listDirectory(dir string, filterFunc func(string) bool) ([]string, error) {
 	fis, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, err

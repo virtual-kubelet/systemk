@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+
+	"github.com/miekg/vks/pkg/provider"
+)
 
 func main() {
-	fmt.Println("vim-go")
+	p, err := provider.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := p.GetPods(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }
