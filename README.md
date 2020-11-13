@@ -1,10 +1,10 @@
 
 NOTE: Work In Progress
 
-# Virtual Kubelet wth systemd
+# Virtual Kubelet for systemd
 
 This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
-with K3S.
+with K3S and go from there.
 
 ## Questions
 
