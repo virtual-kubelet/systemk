@@ -1,0 +1,2 @@
+~/tmp/k3s server --disable-agent --disable-kube-proxy --disable-network-policy --disable coredns \
+--disable servicelb --disable traefik --disable-cloud-controller --disable local-storage --disable metrics-server

@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	o.Provider = "openstack"
+	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
 
 	node, err := cli.New(ctx,
@@ -54,7 +54,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := node.Run(); err != nil {
+	if err := node.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -15,4 +15,5 @@ with K3S and go from there.
 ## TODO
 
 * make it work enough so we can try being a kubelet for K3S
-* figure out how to connect to K3S control plane
+* figure out how to connect to K3S control plane, use code from k3 agent which does this w/ a
+  NODE_TOKEN
