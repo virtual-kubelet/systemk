@@ -4,15 +4,17 @@ import (
 	"context"
 	"log"
 
-	"github.com/miekg/vks/pkg/provider"
+	"github.com/miekg/vks/systemd"
 )
 
 func main() {
-	p, err := provider.New()
+	p, err := systemd.NewProvider()
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := p.GetPods(context.Background()); err != nil {
+	pods, err := p.GetPods(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.printf("%+v\n", pods)
 }

@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/coreos/go-systemd/unit"
+	"github.com/miekg/go-systemd/unit"
 )
 
 func NewUnitFile(raw string) (*UnitFile, error) {
