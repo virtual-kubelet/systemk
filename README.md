@@ -11,3 +11,8 @@ with K3S and go from there.
 * Pods can contain multiple containers. In systemd each container is a Unit (file). How can we keep
   track of these diff. Units and re-create the Pod when we need to?
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
+
+## TODO
+
+* make it work enough so we can try being a kubelet for K3S
+* figure out how to connect to K3S control plane
