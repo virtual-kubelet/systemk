@@ -14,6 +14,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
+	node.Status.VolumesAttached = p.volumesAttached()
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
@@ -94,4 +95,14 @@ func (p *P) nodeConditions() []corev1.NodeCondition {
 			Message:            "RouteController created a route",
 		},
 	}
+}
+
+func (p *P) volumesAttached() []corev1.AttachedVolume {
+	return []corev1.AttachedVolume{
+		{
+			Name:       "local-storage/tmp/tmp",
+			DevicePath: "/tmp",
+		},
+	}
+
 }

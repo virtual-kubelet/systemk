@@ -16,11 +16,12 @@ import (
 
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	println("GET PODS")
+	println("GET POD")
 	return nil, nil
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
+	println("GET PODS")
 	_, err := p.m.ListUnits()
 	if err != nil {
 		return nil, err
@@ -30,7 +31,7 @@ func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	println("gET PODS")
+	println("CREATE PODS")
 	fmt.Printf("+%v\n", pod)
 	return nil
 
@@ -39,6 +40,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *P) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+	println("RUN IN CONTAINER")
 	// not implemented, because we can't
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
@@ -47,11 +49,12 @@ func (p *P) RunInContainer(ctx context.Context, namespace, name, container strin
 // GetPodStatus returns the status of a pod by name that is running inside Zun
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
+	println("GET POD STATUS")
 	return nil, nil
 }
 
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	// systemd
+	println("GET CONTAINER LOGS")
 	return ioutil.NopCloser(strings.NewReader("not support in systemd provider")), nil
 }
 
@@ -154,10 +157,16 @@ func capsuleToPod(capsule *capsules.CapsuleV132) (*v1.Pod, error) {
 */
 
 // UpdatePod is a noop,
-func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error { return nil }
+func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
+	println("UPDATE POD")
+	return nil
+}
 
 // DeletePod deletes
-func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error { return nil }
+func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
+	println("DELETE POD")
+	return nil
+}
 
 /*
 func zunContainerStausToContainerStatus(cs *capsules.Container) v1.ContainerState {
