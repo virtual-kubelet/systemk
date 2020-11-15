@@ -15,13 +15,10 @@ import (
 )
 
 // GetPod returns ...
-func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) { return nil, nil }
-
-// GetPods returns a list of all pods known
-//func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
-//	// multiple containers are multiple units, we need get those back into a single pod
-//	return nil, nil
-//}
+func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
+	println("GET PODS")
+	return nil, nil
+}
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 	_, err := p.m.ListUnits()
