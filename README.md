@@ -12,8 +12,21 @@ with K3S and go from there.
   track of these diff. Units and re-create the Pod when we need to?
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
 
-## TODO
+## Use with K3S
 
-* make it work enough so we can try being a kubelet for K3S
-* figure out how to connect to K3S control plane, use code from k3 agent which does this w/ a
-  NODE_TOKEN
+Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use the `k3s/k3s` shell
+script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script basically starts k3s with
+basically _everything_ disabled.
+
+Compile cmd/virtual-kubelet and start it with:
+
+~~~
+./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
+--enable-node-lease
+~~~
+
+(the node-lease sounded cool, don't know yet if it's really needed).
+
+Now a `k3s kubcetl get nodes` should show the virtual kubelet as a node.
+
+THIS IS AS FAR AS I AM RIGHT NOW.

@@ -11,7 +11,6 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetPod returns ...
@@ -33,9 +32,6 @@ func (p *P) RunInContainer(ctx context.Context, namespace, name, container strin
 	return nil
 }
 
-// ConfigureNode enables a provider to configure the node object that // will be used for Kubernetes.
-func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {}
-
 // GetPodStatus returns the status of a pod by name that is running inside Zun
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
@@ -45,66 +41,6 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	// systemd
 	return ioutil.NopCloser(strings.NewReader("not support in systemd provider")), nil
-}
-
-func (p *P) nodeConditions() []corev1.NodeCondition {
-	// TODO: Make these dynamic and augment with custom Zun specific conditions of interest
-	return []corev1.NodeCondition{
-		{
-			Type:               "Ready",
-			Status:             corev1.ConditionTrue,
-			LastHeartbeatTime:  metav1.Now(),
-			LastTransitionTime: metav1.Now(),
-			Reason:             "KubeletReady",
-			Message:            "kubelet is ready.",
-		},
-		{
-			Type:               "OutOfDisk",
-			Status:             corev1.ConditionFalse,
-			LastHeartbeatTime:  metav1.Now(),
-			LastTransitionTime: metav1.Now(),
-			Reason:             "KubeletHasSufficientDisk",
-			Message:            "kubelet has sufficient disk space available",
-		},
-		{
-			Type:               "MemoryPressure",
-			Status:             corev1.ConditionFalse,
-			LastHeartbeatTime:  metav1.Now(),
-			LastTransitionTime: metav1.Now(),
-			Reason:             "KubeletHasSufficientMemory",
-			Message:            "kubelet has sufficient memory available",
-		},
-		{
-			Type:               "DiskPressure",
-			Status:             corev1.ConditionFalse,
-			LastHeartbeatTime:  metav1.Now(),
-			LastTransitionTime: metav1.Now(),
-			Reason:             "KubeletHasNoDiskPressure",
-			Message:            "kubelet has no disk pressure",
-		},
-		{
-			Type:               "NetworkUnavailable",
-			Status:             corev1.ConditionFalse,
-			LastHeartbeatTime:  metav1.Now(),
-			LastTransitionTime: metav1.Now(),
-			Reason:             "RouteCreated",
-			Message:            "RouteController created a route",
-		},
-	}
-}
-
-// nodeAddresses returns a list of addresses for the node status within Kubernetes.
-func (p *P) nodeAddresses() []corev1.NodeAddress {
-	return nil
-}
-
-// nodeDaemonEndpoints returns NodeDaemonEndpoints for the node status within Kubernetes.
-func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
-	return corev1.NodeDaemonEndpoints{
-		KubeletEndpoint: corev1.DaemonEndpoint{
-			Port: 10, /* p.daemonEndpointPort,*/
-		},
-	}
 }
 
 /* keep because of how to create corev1.Pod object
@@ -301,14 +237,5 @@ func zunStatusToPodConditions(status string, transitiontime metav1.Time) []v1.Po
 		}
 	}
 	return []v1.PodCondition{}
-}
-
-// capacity returns a resource list containing the capacity limits set for Zun.
-func (p *ZunProvider) capacity() v1.ResourceList {
-	return v1.ResourceList{
-		"cpu":    resource.MustParse(p.cpu),
-		"memory": resource.MustParse(p.memory),
-		"pods":   resource.MustParse(p.pods),
-	}
 }
 */
