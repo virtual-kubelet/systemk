@@ -34,7 +34,7 @@ func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
 func (p *P) capacity() corev1.ResourceList {
 	return corev1.ResourceList{
 		"cpu":    resource.MustParse("16"),
-		"memory": resource.MustParse("1GB"),
+		"memory": resource.MustParse("1G"),
 		"pods":   resource.MustParse("110"),
 	}
 }
