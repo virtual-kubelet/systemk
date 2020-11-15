@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"github.com/miekg/vks/pkg/manager"
+	"github.com/virtual-kubelet/node-cli/provider"
 )
 
 type P struct {
@@ -15,3 +16,5 @@ func NewProvider() (*P, error) {
 	}
 	return &P{m}, nil
 }
+
+var _ provider.Provider = new(P)

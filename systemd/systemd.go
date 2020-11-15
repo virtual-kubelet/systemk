@@ -21,13 +21,16 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
-	println("GET PODS")
-	_, err := p.m.ListUnits()
+	u, err := p.m.ListUnits()
 	if err != nil {
 		return nil, err
 	}
+	pods := make([]*corev1.Pod, len(u))
+	for i := range u {
+		pods[i] = unitToPod(u[i])
+	}
 
-	return nil, nil
+	return pods, nil
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
@@ -58,104 +61,6 @@ func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerN
 	return ioutil.NopCloser(strings.NewReader("not support in systemd provider")), nil
 }
 
-/* keep because of how to create corev1.Pod object
-func capsuleToPod(capsule *capsules.CapsuleV132) (*v1.Pod, error) {
-	var podCreationTimestamp metav1.Time
-	var containerStartTime metav1.Time
-
-	podCreationTimestamp = metav1.NewTime(capsule.CreatedAt)
-	if len(capsule.Containers) > 0 {
-		containerStartTime = metav1.NewTime(capsule.Containers[0].StartedAt)
-	}
-	containerStartTime = metav1.NewTime(time.Time{})
-	// Deal with container inside capsule
-	containers := make([]v1.Container, 0, len(capsule.Containers))
-	containerStatuses := make([]v1.ContainerStatus, 0, len(capsule.Containers))
-	for _, c := range capsule.Containers {
-		containerMemoryMB := 0
-		if c.Memory != "" {
-			containerMemory, err := strconv.Atoi(c.Memory)
-			if err != nil {
-				log.Println(err)
-			}
-			containerMemoryMB = containerMemory
-		}
-		container := v1.Container{
-			Name:    c.Name,
-			Image:   c.Image,
-			Command: c.Command,
-			Resources: v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
-				},
-
-				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU*1024/100))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
-				},
-			},
-		}
-		containers = append(containers, container)
-		containerStatus := v1.ContainerStatus{
-			Name:                 c.Name,
-			State:                zunContainerStausToContainerStatus(&c),
-			LastTerminationState: zunContainerStausToContainerStatus(&c),
-			Ready:                zunStatusToPodPhase(c.Status) == v1.PodRunning,
-			RestartCount:         int32(0),
-			Image:                c.Image,
-			ImageID:              "",
-			ContainerID:          c.UUID,
-		}
-
-		// Add to containerStatuses
-		containerStatuses = append(containerStatuses, containerStatus)
-	}
-
-	ip := ""
-	if capsule.Addresses != nil {
-		for _, v := range capsule.Addresses {
-			for _, addr := range v {
-				if addr.Version == float64(4) {
-					ip = addr.Addr
-				}
-			}
-		}
-	}
-	p := v1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              capsule.MetaLabels["PodName"],
-			Namespace:         capsule.MetaLabels["Namespace"],
-			ClusterName:       capsule.MetaLabels["ClusterName"],
-			UID:               types.UID(capsule.UUID),
-			CreationTimestamp: podCreationTimestamp,
-		},
-		Spec: v1.PodSpec{
-			NodeName:   capsule.MetaLabels["NodeName"],
-			Volumes:    []v1.Volume{},
-			Containers: containers,
-		},
-
-		Status: v1.PodStatus{
-			Phase:             zunStatusToPodPhase(capsule.Status),
-			Conditions:        zunStatusToPodConditions(capsule.Status, podCreationTimestamp),
-			Message:           "",
-			Reason:            "",
-			HostIP:            "",
-			PodIP:             ip,
-			StartTime:         &containerStartTime,
-			ContainerStatuses: containerStatuses,
-		},
-	}
-
-	return &p, nil
-}
-*/
-
 // UpdatePod is a noop,
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	println("UPDATE POD")
@@ -164,7 +69,7 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 
 // DeletePod deletes
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	println("DELETE POD")
+	println("DELETE POD", pod.ObjectMeta.Name)
 	return nil
 }
 

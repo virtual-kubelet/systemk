@@ -14,7 +14,11 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
-	node.Status.VolumesAttached = p.volumesAttached()
+	// Skipping processing of pod because ... is not know to the control plane
+	// Somehow the ConfigureNode is not happening correctly.
+	// This can also be a k3s problem instead of k8s.
+	//	node.Status.VolumesAttached = p.volumesAttached()
+	//	node.Status.VolumesInUse = p.volumesInUse()
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
@@ -46,9 +50,10 @@ func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
 // capacity returns a resource list containing the capacity limits set for Zun.
 func (p *P) capacity() corev1.ResourceList {
 	return corev1.ResourceList{
-		"cpu":    resource.MustParse(cpu()),
-		"memory": resource.MustParse(memory()),
-		"pods":   resource.MustParse("110"), // no idea
+		"cpu":     resource.MustParse(cpu()),
+		"memory":  resource.MustParse(memory()),
+		"pods":    resource.MustParse("110"), // entire PID space??
+		"storage": resource.MustParse("40G"),
 	}
 }
 
@@ -100,9 +105,12 @@ func (p *P) nodeConditions() []corev1.NodeCondition {
 func (p *P) volumesAttached() []corev1.AttachedVolume {
 	return []corev1.AttachedVolume{
 		{
-			Name:       "local-storage/tmp/tmp",
+			Name:       "rancher.io/local-path/tmp",
 			DevicePath: "/tmp",
 		},
 	}
+}
 
+func (p *P) volumesInUse() []corev1.UniqueVolumeName {
+	return []corev1.UniqueVolumeName{"ranchor.io/local-path/tmp"}
 }
