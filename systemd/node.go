@@ -16,6 +16,14 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
+	node.ObjectMeta = metav1.ObjectMeta{
+		Name: hostname(),
+		Labels: map[string]string{
+			"type":                   "virtual-kubelet",
+			"kubernetes.io/role":     "agent",
+			"kubernetes.io/hostname": hostname(),
+		},
+	}
 }
 
 // nodeAddresses returns a list of addresses for the node status within Kubernetes.
@@ -33,9 +41,9 @@ func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
 // capacity returns a resource list containing the capacity limits set for Zun.
 func (p *P) capacity() corev1.ResourceList {
 	return corev1.ResourceList{
-		"cpu":    resource.MustParse("16"),
-		"memory": resource.MustParse("1G"),
-		"pods":   resource.MustParse("110"),
+		"cpu":    resource.MustParse(cpu()),
+		"memory": resource.MustParse(memory()),
+		"pods":   resource.MustParse("110"), // no idea
 	}
 }
 

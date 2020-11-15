@@ -2,24 +2,32 @@ package systemd
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
+	"os"
 )
 
-func memory() (string, error) {
+func memory() string {
 	buf, err := ioutil.ReadFile("/proc/meminfo")
 	if err != nil {
-		return "", err
+		return ""
 	}
 	// First line is MemTotal which we're intested in
 	i := bytes.Index(buf, []byte("\n"))
 	if i == 0 {
-		return "", fmt.Errorf("")
+		return ""
 	}
 	line := bytes.ReplaceAll(buf[:i], []byte("MemTotal:"), []byte{})
-	return string(bytes.TrimSpace(line)), nil
+	line = bytes.TrimSpace(line)
+	line = bytes.ReplaceAll(line, []byte(" "), []byte{}) // space between number and unit
+	amount := line[:len(line)-1]                         // cut of last B
+	return string(amount)
 }
 
-func cpu() (string, error) {
-	return "", nil
+func cpu() string {
+	return "4"
+}
+
+func hostname() string {
+	h, _ := os.Hostname()
+	return h
 }
