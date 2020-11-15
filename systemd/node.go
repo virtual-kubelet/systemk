@@ -10,12 +10,16 @@ import (
 
 // ConfigureNode enables a provider to configure the node object that will be used for Kubernetes.
 func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
+	// POD CIDR??
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
+	node.Status.NodeInfo.KernelVersion = kernel()
+	node.Status.NodeInfo.OSImage = image()
+	node.Status.NodeInfo.ContainerRuntimeVersion = version()
 	node.ObjectMeta = metav1.ObjectMeta{
 		Name: hostname(),
 		Labels: map[string]string{

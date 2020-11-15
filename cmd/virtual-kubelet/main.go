@@ -28,7 +28,7 @@ import (
 var (
 	buildVersion = "N/A"
 	buildTime    = "N/A"
-	k8sVersion   = "v1.18.1" // Inject this build time by parsing mod.go
+	k8sVersion   = "v1.18.4" // Inject this build time by parsing mod.go
 )
 
 func main() {

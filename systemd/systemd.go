@@ -4,6 +4,7 @@ package systemd
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,7 +23,21 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 //	return nil, nil
 //}
 
-func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error { return nil }
+func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
+	_, err := p.m.ListUnits()
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
+	println("gET PODS")
+	fmt.Printf("+%v\n", pod)
+	return nil
+
+}
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.

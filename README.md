@@ -6,11 +6,24 @@ NOTE: Work In Progress
 This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
 with K3S and go from there.
 
+`vks` will start pods as plain processes, there are no cgroups (yet, maybe systemd will allow for
+this easily), but generally there is no isolation. You basically use the k8s control plane to start
+linux processes. There is also no address space allocated to the PODs specically, you are using the
+host's networking.
+
+"Images" are referencing (Debian) packages, these will be apt-get installed. Discoverying that an
+installed package is no longer used is hard, so this will not be done.
+
 ## Questions
 
 * Pods can contain multiple containers. In systemd each container is a Unit (file). How can we keep
   track of these diff. Units and re-create the Pod when we need to?
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
+* How to provision a Debian system to be able to join a k3s cluster? Something very minimal is
+  needed here. _Maybe_ getting to k3s super early will help. We can then install extra things to
+  configure?
+* Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
+  Debian. I need to add a repo for this... How?
 
 ## Use with K3S
 
@@ -22,11 +35,17 @@ Compile cmd/virtual-kubelet and start it with:
 
 ~~~
 ./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
---enable-node-lease
+--enable-node-lease --disable-taint
 ~~~
 
-(the node-lease sounded cool, don't know yet if it's really needed).
+Now a `k3s kubcetl get nodes` should show the virtual kubelet as a node:
+~~~
+NAME    STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
+draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.04.1 LT   5.4.0-53-generic   systemd 245 (245.4-4ubuntu3.3)
+~~~
 
-Now a `k3s kubcetl get nodes` should show the virtual kubelet as a node.
+`draak` is my machine's name.
 
 THIS IS AS FAR AS I AM RIGHT NOW.
+
+- Scheduling a pod doesn't seem to connect to my virtual kubelet

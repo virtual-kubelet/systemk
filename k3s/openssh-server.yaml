@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: openssh-server
+  labels:
+    name: openssh-server
+spec:
+  containers:
+  - name: openssh-server
+    image: openssh-server
+    ports:
+    - containerPort: 2222
