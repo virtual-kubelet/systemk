@@ -24,9 +24,11 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.ObjectMeta = metav1.ObjectMeta{
 		Name: system.Hostname(),
 		Labels: map[string]string{
-			"type":                   "virtual-kubelet",
-			"kubernetes.io/role":     "agent",
-			"kubernetes.io/hostname": system.Hostname(),
+			"type":                              "virtual-kubelet",
+			"kubernetes.io/role":                "agent",
+			"kubernetes.io/hostname":            system.Hostname(),
+			corev1.LabelZoneFailureDomainStable: "localhost",
+			corev1.LabelZoneRegionStable:        system.Hostname(),
 		},
 	}
 }
