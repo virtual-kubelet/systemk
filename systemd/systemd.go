@@ -21,6 +21,8 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
+	// focus on starting a unit first
+	return nil, nil
 	u, err := p.m.ListUnits()
 	if err != nil {
 		return nil, err
@@ -165,3 +167,19 @@ func zunStatusToPodConditions(status string, transitiontime metav1.Time) []v1.Po
 	return []v1.PodCondition{}
 }
 */
+
+// IsVirtuelKubeletUnit returns true of the name of the unit is managed by virtual kubelet. Right now
+// this means it's a `.service` the name starts with `vks-`.
+func IsVirtuelKubeletUnit(name string) bool {
+	if strings.HasPrefix(name, "vks-") {
+		return true
+	}
+	if strings.HasSuffix(name, ".service") {
+		return true
+	}
+	return false
+}
+
+func ImageNameToUnitName(name string) string {
+	return "vks-" + name + ".service"
+}
