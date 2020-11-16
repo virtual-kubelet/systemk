@@ -38,7 +38,7 @@ basically _everything_ disabled.
 Compile cmd/virtual-kubelet and start it with:
 
 ~~~
-./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
+sudo ./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
 --enable-node-lease --disable-taint
 ~~~
 

@@ -1,24 +1,24 @@
 package systemd
 
 import (
+	"sort"
 	"time"
 
 	"github.com/miekg/vks/pkg/system"
 	"github.com/miekg/vks/pkg/unit"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
-	podname := ""
-	namespace := ""
+	name := ""
 	status := ""
 	for k, v := range units {
-		podname = k           // parse! namespace/podname
-		namespace = "default" // parse from k
+		name = k
 		status = v.ActiveState
+		break
 	}
-	println(namespace)
 	// order of the map is random, need to sort.
 	containers := toContainers(units)
 	containerStatuses := toContainerStatuses(units)
@@ -29,10 +29,10 @@ func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        podname,   // get pod name from
-			Namespace:   "default", // parse from u.Name
+			Name:        Pod(name),
+			Namespace:   Namespace(name),
 			ClusterName: "cluster.local",
-			//			UID:               // parse from u.Name
+			//			UID:         UID(name),
 			//			CreationTimestamp: // do we know?
 		},
 		Spec: corev1.PodSpec{
@@ -57,82 +57,90 @@ func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
 }
 
 func toContainers(units map[string]*unit.UnitState) []corev1.Container {
-	// name
-	return nil
-}
-
-func toContainerStatuses(units map[string]*unit.UnitState) []corev1.ContainerStatus {
-	//	for name, unit := range units {
-	//
-	//	}
-	return nil
-}
-
-/*
-func capsuleToPod(capsule *capsules.CapsuleV132) (*v1.Pod, error) {
-	var podCreationTimestamp metav1.Time
-	var containerStartTime metav1.Time
-
-	podCreationTimestamp = metav1.NewTime(capsule.CreatedAt)
-	if len(capsule.Containers) > 0 {
-		containerStartTime = metav1.NewTime(capsule.Containers[0].StartedAt)
-	}
-	containerStartTime = metav1.NewTime(time.Time{})
-	// Deal with container inside capsule
-	containers := make([]v1.Container, 0, len(capsule.Containers))
-	containerStatuses := make([]v1.ContainerStatus, 0, len(capsule.Containers))
-	for _, c := range capsule.Containers {
-		containerMemoryMB := 0
-		if c.Memory != "" {
-			containerMemory, err := strconv.Atoi(c.Memory)
-			if err != nil {
-				log.Println(err)
-			}
-			containerMemoryMB = containerMemory
-		}
+	keys := unitNames(units)
+	containers := make([]v1.Container, 0, len(units))
+	for _, k := range keys {
 		container := v1.Container{
-			Name:    c.Name,
-			Image:   c.Image,
-			Command: c.Command,
+			Name:      Name(k),
+			Image:     Image(k),
+			Command:   []string{"/bin/sh"}, // parse from unit file?
 			Resources: v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
-				},
+				/*
+					Limits: v1.ResourceList{
+						v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU))),
+						v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
+					},
 
-				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU*1024/100))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
-				},
+					Requests: v1.ResourceList{
+						v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU*1024/100))),
+						v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dM", containerMemoryMB)),
+					},
+				*/
 			},
 		}
 		containers = append(containers, container)
-		containerStatus := v1.ContainerStatus{
-			Name:                 c.Name,
-			State:                zunContainerStausToContainerStatus(&c),
-			LastTerminationState: zunContainerStausToContainerStatus(&c),
-			Ready:                zunStatusToPodPhase(c.Status) == v1.PodRunning,
-			RestartCount:         int32(0),
-			Image:                c.Image,
-			ImageID:              "",
-			ContainerID:          c.UUID,
-		}
-
-		// Add to containerStatuses
-		containerStatuses = append(containerStatuses, containerStatus)
 	}
-
-	ip := ""
-	if capsule.Addresses != nil {
-		for _, v := range capsule.Addresses {
-			for _, addr := range v {
-				if addr.Version == float64(4) {
-					ip = addr.Addr
-				}
-			}
-		}
-	}
-
-	return &p, nil
+	return containers
 }
-*/
+
+func toContainerStatuses(units map[string]*unit.UnitState) []corev1.ContainerStatus {
+	keys := unitNames(units)
+	statuses := make([]v1.ContainerStatus, 0, len(units))
+	for _, k := range keys {
+		u := units[k]
+		status := v1.ContainerStatus{
+			Name:                 Name(k),
+			State:                containerState(u),
+			LastTerminationState: containerState(u),
+			Ready:                activeStateToPhase(u.ActiveState) == v1.PodRunning,
+			RestartCount:         int32(0),
+			Image:                Image(k),
+			ImageID:              "",
+			ContainerID:          "uuid", // from name?
+		}
+		statuses = append(statuses, status)
+	}
+	return statuses
+}
+
+func containerState(u *unit.UnitState) v1.ContainerState {
+	// Handle the case where the container is running.
+	if u.ActiveState == "active" {
+		return v1.ContainerState{
+			Running: &v1.ContainerStateRunning{
+				StartedAt: metav1.NewTime(time.Time(time.Now())),
+			},
+		}
+	}
+
+	// Handle the case where the container failed.
+	if u.ActiveState == "failed" || u.ActiveState == "inactive" {
+		return v1.ContainerState{
+			Terminated: &v1.ContainerStateTerminated{
+				ExitCode:   int32(0),
+				Reason:     u.ActiveState,
+				Message:    "yes",
+				StartedAt:  metav1.NewTime(time.Time(time.Now())),
+				FinishedAt: metav1.NewTime(time.Time(time.Now())),
+			},
+		}
+	}
+
+	// Handle the case where the container is pending.
+	return v1.ContainerState{
+		Waiting: &v1.ContainerStateWaiting{
+			Reason:  u.ActiveState,
+			Message: "now what",
+		},
+	}
+}
+
+func unitNames(units map[string]*unit.UnitState) []string {
+	keys := make([]string, len(units))
+	i := 0
+	for k := range units {
+		keys[i] = k
+		i++
+	}
+	return sort.StringSlice(keys)
+}
