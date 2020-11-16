@@ -14,6 +14,8 @@ host's networking.
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discoverying that an
 installed package is no longer used is hard, so this will not be done.
 
+Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones are managed by it.
+
 ## Questions
 
 * Pods can contain multiple containers. In systemd each container is a Unit (file). How can we keep
@@ -24,6 +26,9 @@ installed package is no longer used is hard, so this will not be done.
   configure?
 * Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
   Debian. I need to add a repo for this... How?
+* If imagePullPolicy is set to Always, then apt-get install the binary ? If not check if the "image"
+  can be found in $PATH and use it?
+* namespaces?? Are they useful on a technical level for systemd?
 
 ## Use with K3S
 
@@ -46,13 +51,5 @@ draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.0
 
 `draak` is my machine's name.
 
-THIS IS AS FAR AS I AM RIGHT NOW.
-
-- Scheduling a pod doesn't seem to connect to my virtual kubelet
-- For some reason the node is *Ready*, but scheduling pods fail because of storage(??). Seeing
-  things like
-   ~~~
-   W1115 14:51:24.961835   58734 actual_state_of_world.go:506] Failed to update statusUpdateNeeded field in actual state of world: Failed to set statusUpdateNeeded to needed true, because nodeName="draak" does not exist
-   I1115 14:20:11.926828   54046 util.go:222] Skipping processing of pod "default"/"openssh-server": it is scheduled to node "draak" which is not managed by the controller.
-   I1115 14:20:11.926952   54046 attach_detach_controller.go:440] Skipping volume "default-token-zjhfs" for pod "default"/"openssh-server": it does not implement attacher interface. err=no volume plugin matched
-   ~~~~
+You can now try to schedule a pod: `k3s/kubelet apply -f k3s/openssh-server.yaml`. This will call
+out and try to schedule.

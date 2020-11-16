@@ -211,7 +211,6 @@ func (m *UnitManager) GetUnitStates(filter set.Set) (map[string]*unit.UnitState,
 	dbusStatuses, err := m.systemd.ListUnitsByNames(filter.Values())
 
 	if err != nil {
-		println("ListUnits")
 		fallback = true
 		dbusStatuses, err = m.systemd.ListUnits()
 		if err != nil {

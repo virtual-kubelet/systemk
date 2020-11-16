@@ -14,11 +14,6 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
-	// Skipping processing of pod because ... is not know to the control plane
-	// Somehow the ConfigureNode is not happening correctly.
-	// This can also be a k3s problem instead of k8s.
-	//	node.Status.VolumesAttached = p.volumesAttached()
-	//	node.Status.VolumesInUse = p.volumesInUse()
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
@@ -99,18 +94,13 @@ func (p *P) nodeConditions() []corev1.NodeCondition {
 			Reason:             "RouteCreated",
 			Message:            "RouteController created a route",
 		},
-	}
-}
-
-func (p *P) volumesAttached() []corev1.AttachedVolume {
-	return []corev1.AttachedVolume{
 		{
-			Name:       "rancher.io/local-path/tmp",
-			DevicePath: "/tmp",
+			Type:               "PIDPressure",
+			Status:             corev1.ConditionFalse,
+			LastHeartbeatTime:  metav1.Now(),
+			LastTransitionTime: metav1.Now(),
+			Reason:             "KubeletHasSufficientPIDs",
+			Message:            "kubelet has sufficient PIDs available",
 		},
 	}
-}
-
-func (p *P) volumesInUse() []corev1.UniqueVolumeName {
-	return []corev1.UniqueVolumeName{"ranchor.io/local-path/tmp"}
 }
