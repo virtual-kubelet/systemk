@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"github.com/miekg/go-systemd/dbus"
+	"github.com/miekg/vks/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,7 +35,7 @@ func unitToPod(u dbus.UnitStatus) *corev1.Pod {
 			//			CreationTimestamp: podCreationTimestamp,
 		},
 		Spec: corev1.PodSpec{
-			NodeName: hostname(),
+			NodeName: system.Hostname(),
 			Volumes:  []corev1.Volume{},
 			//Containers: containers,
 		},

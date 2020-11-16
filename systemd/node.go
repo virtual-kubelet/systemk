@@ -3,6 +3,7 @@ package systemd
 import (
 	"context"
 
+	"github.com/miekg/vks/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,15 +18,15 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	node.Status.NodeInfo.OperatingSystem = "Linux"
-	node.Status.NodeInfo.KernelVersion = kernel()
-	node.Status.NodeInfo.OSImage = image()
-	node.Status.NodeInfo.ContainerRuntimeVersion = version()
+	node.Status.NodeInfo.KernelVersion = system.Kernel()
+	node.Status.NodeInfo.OSImage = system.Image()
+	node.Status.NodeInfo.ContainerRuntimeVersion = system.Version()
 	node.ObjectMeta = metav1.ObjectMeta{
-		Name: hostname(),
+		Name: system.Hostname(),
 		Labels: map[string]string{
 			"type":                   "virtual-kubelet",
 			"kubernetes.io/role":     "agent",
-			"kubernetes.io/hostname": hostname(),
+			"kubernetes.io/hostname": system.Hostname(),
 		},
 	}
 }
@@ -45,8 +46,8 @@ func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
 // capacity returns a resource list containing the capacity limits set for Zun.
 func (p *P) capacity() corev1.ResourceList {
 	return corev1.ResourceList{
-		"cpu":     resource.MustParse(cpu()),
-		"memory":  resource.MustParse(memory()),
+		"cpu":     resource.MustParse(system.CPU()),
+		"memory":  resource.MustParse(system.Memory()),
 		"pods":    resource.MustParse("110"), // entire PID space??
 		"storage": resource.MustParse("40G"),
 	}
