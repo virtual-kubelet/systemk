@@ -101,5 +101,5 @@ func ID() string {
 		return ""
 	}
 	id = id[:j]
-	return string(id[:len(id)-1]) // newline
+	return string(id)
 }
