@@ -1,19 +1,21 @@
 package packages
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
+	"strings"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system
 type DebianPackageManager struct{}
 
 const (
-	aptGetCommand              = "apt-get"
-	aptCacheCommand            = "apt-cache"
+	aptGetCommand              = "/usr/bin/apt-get"
+	aptCacheCommand            = "/usr/bin/apt-cache"
+	dpkgCommand                = "/usr/bin/dpkg"
 	systemdUnitfilesPathPrefix = "/lib/systemd/system/"
-	systemdUnitfileSuffix      = ".service"
 )
 
 // Install install the given package at the given version
@@ -37,16 +39,13 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 		}
 	}
 
-	installCmdArgs := []string{
-		"-qq",
-		"--force-yes",
-		"install",
-		fmt.Sprintf("%s=%s*", pkg, version),
+	installCmdArgs := []string{"-qq", "--force-yes", "install"}
+	if version != "" {
+		installCmdArgs = append(installCmdArgs, fmt.Sprintf("%s=%s*", pkg, version))
 	}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 
-	// logging, etc metrics
-	_, err = cmd.CombinedOutput()
+	_, err = installCmd.CombinedOutput()
 	if err != nil {
 		return err
 	}
@@ -56,15 +55,24 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 // Unitfile returns the location of the unitfile for the given package
 // Returns an error if no unitfiles were found
 func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
-	basicPath := systemdUnitfilesPathPrefix + pkg + systemdUnitfileSuffix
-	_, err := os.Stat(basicPath)
-	if err == nil {
-		return basicPath
-	}
-	if !os.IsNotExist(err) {
-		return "", fmt.Errorf("failed to stat on %s: %w", basicPath, err)
+	cmd := exec.Command(dpkgCommand, "-L", pkg)
+	buf, err := cmd.Output()
+	if err != nil {
+		return "", err
 	}
 
-	// TODO handle corner cases like openssh
-	return "", fmt.Errorf("not implemtented")
+	scanner := bufio.NewScanner(bytes.NewReader(buf))
+	for scanner.Scan() {
+		if !strings.HasPrefix(scanner.Text(), systemdUnitfilesPathPrefix) {
+			continue
+		}
+		if strings.HasSuffix(scanner.Text(), SystemdUnitfileSuffix) {
+			return scanner.Text(), nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+	return "", fmt.Errorf("no unit found")
 }

@@ -9,3 +9,5 @@ type PackageManager interface {
 	// Returns an error if no unitfiles were found
 	Unitfile(pkg string) (string, error)
 }
+
+const SystemdUnitfileSuffix = ".service"
