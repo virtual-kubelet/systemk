@@ -1,4 +1,4 @@
-package systemd
+package system
 
 import (
 	"bytes"
@@ -7,7 +7,8 @@ import (
 	"os/exec"
 )
 
-func memory() string {
+// Memory returns the amount of memory in the system.
+func Memory() string {
 	buf, err := ioutil.ReadFile("/proc/meminfo")
 	if err != nil {
 		return ""
@@ -24,16 +25,24 @@ func memory() string {
 	return string(amount)
 }
 
-func cpu() string {
-	return "4"
+// CPU returns the number of CPUs in the system as reported by nproc.
+func CPU() string {
+	cmd := exec.Command("nproc")
+	buf, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return string(buf[:len(buf)-1])
 }
 
-func hostname() string {
+// Hostname returns the machine's host name.
+func Hostname() string {
 	h, _ := os.Hostname()
 	return h
 }
 
-func kernel() string {
+// Kernel returns kernel version.
+func Kernel() string {
 	cmd := exec.Command("uname", "-r")
 	buf, err := cmd.Output()
 	if err != nil {
@@ -42,7 +51,8 @@ func kernel() string {
 	return string(buf[:len(buf)-1])
 }
 
-func image() string {
+// Image returns the systems image (PRETTY_NAME from /etc/os-release)
+func Image() string {
 	buf, err := ioutil.ReadFile("/etc/os-release")
 	if err != nil {
 		return ""
@@ -61,7 +71,8 @@ func image() string {
 	return string(os[:len(os)-1]) // newline
 }
 
-func version() string {
+// Version returns the version of systemd.
+func Version() string {
 	cmd := exec.Command("systemd", "--version")
 	buf, err := cmd.Output()
 	if err != nil {
@@ -72,4 +83,23 @@ func version() string {
 		return ""
 	}
 	return string(buf[:i])
+}
+
+// ID returns the ID of the system.
+func ID() string {
+	buf, err := ioutil.ReadFile("/etc/os-release")
+	if err != nil {
+		return ""
+	}
+	i := bytes.Index(buf, []byte("ID="))
+	if i == 0 {
+		return ""
+	}
+	id := buf[i+len("ID="):]
+	j := bytes.Index(id, []byte("\n"))
+	if j == 0 {
+		return ""
+	}
+	id = id[:j]
+	return string(id[:len(id)-1]) // newline
 }
