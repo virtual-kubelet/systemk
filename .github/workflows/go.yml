@@ -1,0 +1,28 @@
+name: Go
+on: [push, pull_request]
+jobs:
+
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.15' ]
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Virtual Kubelet Build
+      run: cd cmd/virtual-kubelet; go build -v ./...
+
+    - name: Virtual Kubelet Test
+      run: cd cmd/virtual-kubelet; go test -v ./...
+
+    - name: Pkg Test
+      run: cd pkg; go test -v ./...
