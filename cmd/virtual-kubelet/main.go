@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/miekg/vks/systemd"
@@ -40,6 +41,7 @@ func main() {
 	}
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
+	o.NodeName, _ = os.Hostname()
 
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
