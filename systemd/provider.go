@@ -25,6 +25,8 @@ func NewProvider() (*P, error) {
 		return nil, fmt.Errorf("unsupported system")
 	case "debian", "ubuntu":
 		p.Pkg = new(packages.DebianPackageManager)
+	case "arch":
+		p.Pkg = new(packages.ArchlinuxPackageManager)
 	}
 	return p, nil
 }

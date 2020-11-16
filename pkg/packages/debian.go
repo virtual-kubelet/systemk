@@ -13,10 +13,10 @@ import (
 type DebianPackageManager struct{}
 
 const (
-	aptGetCommand              = "/usr/bin/apt-get"
-	aptCacheCommand            = "/usr/bin/apt-cache"
-	dpkgCommand                = "/usr/bin/dpkg"
-	systemdUnitfilesPathPrefix = "/lib/systemd/system/"
+	aptGetCommand                    = "/usr/bin/apt-get"
+	aptCacheCommand                  = "/usr/bin/apt-cache"
+	dpkgCommand                      = "/usr/bin/dpkg"
+	debianSystemdUnitfilesPathPrefix = "/lib/systemd/system/"
 )
 
 // Install install the given package at the given version
@@ -64,7 +64,7 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 
 	scanner := bufio.NewScanner(bytes.NewReader(buf))
 	for scanner.Scan() {
-		if !strings.HasPrefix(scanner.Text(), systemdUnitfilesPathPrefix) {
+		if !strings.HasPrefix(scanner.Text(), debianSystemdUnitfilesPathPrefix) {
 			continue
 		}
 		if strings.HasSuffix(scanner.Text(), SystemdUnitfileSuffix) {
@@ -76,7 +76,7 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	// if not found, scan the directory to see if we can spot one
-	basicPath := systemdUnitfilesPathPrefix + pkg + SystemdUnitfileSuffix
+	basicPath := debianSystemdUnitfilesPathPrefix + pkg + SystemdUnitfileSuffix
 	if _, err := os.Stat(basicPath); err != nil {
 		return "", err
 	}
