@@ -13,17 +13,14 @@ import (
 type ArchlinuxPackageManager struct{}
 
 const (
-	pacmanCommand                       = "/usr/bin/apt-get"
+	pacmanCommand                       = "/usr/bin/pacman"
 	archlinuxSystemdUnitfilesPathPrefix = "/usr/lib/systemd/system/"
 )
 
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *ArchlinuxPackageManager) Install(pkg, version string) error {
-	checkCmdArgs := []string{
-		"-Qi",
-		pkg,
-	}
+	checkCmdArgs := []string{"-Qi", pkg}
 	checkCmd := exec.Command(pacmanCommand, checkCmdArgs...)
 
 	err := checkCmd.Run()
@@ -38,10 +35,7 @@ func (p *ArchlinuxPackageManager) Install(pkg, version string) error {
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 
 	_, err = installCmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Unitfile returns the location of the unitfile for the given package

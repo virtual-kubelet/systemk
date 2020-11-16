@@ -47,10 +47,7 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 
 	_, err = installCmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Unitfile returns the location of the unitfile for the given package
