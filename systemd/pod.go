@@ -17,7 +17,7 @@ import (
 
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	println("GET POD")
+	println("GET POD", namespace, name)
 	return nil, nil
 }
 
@@ -35,7 +35,6 @@ func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	println("CREATE PODS")
 	podUID := string(pod.UID)
 	// podCreationTimestamp := pod.CreationTimestamp.String()
 	/*
@@ -58,7 +57,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
-		name := "vks-" + c.Image + podUID
+		name := ImageNameToUnitName(c.Image, podUID)
 		log.Printf("Starting unit %s, %s as %s", c.Name, c.Image, name)
 		buf, err := ioutil.ReadFile(u)
 		if err != nil {
@@ -79,7 +78,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	fmt.Printf("%v\n", pod.Spec.Containers)
 	fmt.Printf("+%v\n", pod)
 	return nil
-
 }
 
 // RunInContainer executes a command in a container in the pod, copying data
@@ -91,7 +89,7 @@ func (p *P) RunInContainer(ctx context.Context, namespace, name, container strin
 	return nil
 }
 
-// GetPodStatus returns the status of a pod by name that is running inside Zun
+// GetPodStatus returns the status of a pod by name that is running.
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
 	println("GET POD STATUS")
@@ -208,9 +206,9 @@ func zunStatusToPodConditions(status string, transitiontime metav1.Time) []v1.Po
 }
 */
 
-// IsVirtuelKubeletUnit returns true of the name of the unit is managed by virtual kubelet. Right now
+// IsVirtualKubeletUnit returns true of the name of the unit is managed by virtual kubelet. Right now
 // this means it's a `.service` the name starts with `vks-`.
-func IsVirtuelKubeletUnit(name string) bool {
+func IsVirtualKubeletUnit(name string) bool {
 	if strings.HasPrefix(name, "vks-") {
 		return true
 	}
@@ -220,6 +218,6 @@ func IsVirtuelKubeletUnit(name string) bool {
 	return false
 }
 
-func ImageNameToUnitName(name string) string {
+func ImageNameToUnitName(name, uid string) string {
 	return "vks-" + name + ".service"
 }
