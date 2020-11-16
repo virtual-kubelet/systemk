@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -74,5 +75,10 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
-	return "", fmt.Errorf("no unit found")
+	// if not found, scan the directory to see if we can spot one
+	basicPath := systemdUnitfilesPathPrefix + pkg + SystemdUnitfileSuffix
+	if _, err := os.Stat(basicPath); err != nil {
+		return "", err
+	}
+	return basicPath, nil
 }
