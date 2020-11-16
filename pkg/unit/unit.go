@@ -194,6 +194,7 @@ func HashFromHexString(key string) (Hash, error) {
 }
 
 // UnitState encodes the current state of a unit loaded into a fleet agent
+// TODO(miekg): extend this, or something, certainly get rid of 'fleet' in this file.
 type UnitState struct {
 	LoadState   string
 	ActiveState string

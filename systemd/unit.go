@@ -1,57 +1,71 @@
 package systemd
 
 import (
-	"github.com/miekg/go-systemd/dbus"
+	"time"
+
 	"github.com/miekg/vks/pkg/system"
+	"github.com/miekg/vks/pkg/unit"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func unitToPod(u dbus.UnitStatus) *corev1.Pod {
-	/*
-		type UnitStatus struct {
-			Name        string          // The primary unit name as string
-			Description string          // The human readable description string
-			LoadState   string          // The load state (i.e. whether the unit file has been loaded successfully)
-			ActiveState string          // The active state (i.e. whether the unit is currently started or not)
-			SubState    string          // The sub state (a more fine-grained version of the active state that is specific to the unit type, which the active state is not)
-			Followed    string          // A unit that is being followed in its state by this unit, if there is any, otherwise the empty string.
-			Path        dbus.ObjectPath // The unit object path
-			JobId       uint32          // If there is a job queued for the job unit the numeric job id, 0 otherwise
-			JobType     string          // The job type as string
-			JobPath     dbus.ObjectPath // The job object path
-		}
-	*/
+func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
+	podname := ""
+	namespace := ""
+	status := ""
+	for k, v := range units {
+		podname = k           // parse! namespace/podname
+		namespace = "default" // parse from k
+		status = v.ActiveState
+	}
+	println(namespace)
+	// order of the map is random, need to sort.
+	containers := toContainers(units)
+	containerStatuses := toContainerStatuses(units)
+
 	p := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        u.Name,
-			Namespace:   "default",
+			Name:        podname,   // get pod name from
+			Namespace:   "default", // parse from u.Name
 			ClusterName: "cluster.local",
-			//			UID:               types.UID(capsule.UUID),
-			//			CreationTimestamp: podCreationTimestamp,
+			//			UID:               // parse from u.Name
+			//			CreationTimestamp: // do we know?
 		},
 		Spec: corev1.PodSpec{
-			NodeName: system.Hostname(),
-			Volumes:  []corev1.Volume{},
-			//Containers: containers,
+			NodeName:   system.Hostname(),
+			Volumes:    []corev1.Volume{},
+			Containers: containers,
 		},
 
+		// podstatus is the sum of all container statusses???
 		Status: corev1.PodStatus{
-			//Phase:      zunStatusToPodPhase(capsule.Status),
-			///Conditions: zunStatusToPodConditions(capsule.Status, podCreationTimestamp),
-			Message: "",
-			Reason:  "",
-			HostIP:  "",
-			PodIP:   "127.0.0.1",
+			Phase:      activeStateToPhase(status),
+			Conditions: activeStateToPodConditions(status, metav1.NewTime(time.Now())),
+			Message:    "",
+			Reason:     "",
+			HostIP:     "",
+			PodIP:      "127.0.0.1",
 			//			StartTime:         &containerStartTime,
-			//			ContainerStatuses: containerStatuses,
+			ContainerStatuses: containerStatuses,
 		},
 	}
 	return p
+}
+
+func toContainers(units map[string]*unit.UnitState) []corev1.Container {
+	// name
+	return nil
+}
+
+func toContainerStatuses(units map[string]*unit.UnitState) []corev1.ContainerStatus {
+	//	for name, unit := range units {
+	//
+	//	}
+	return nil
 }
 
 /*
