@@ -22,10 +22,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/miekg/go-systemd/dbus"
-	"github.com/miekg/vks/pkg/set"
 	"github.com/miekg/vks/pkg/unit"
 )
 
@@ -194,37 +194,29 @@ func (m *UnitManager) ReloadUnitFiles() error { return m.systemd.Reload() }
 // this manager's units directory.
 func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) }
 
-func (m *UnitManager) ListUnits() ([]dbus.UnitStatus, error) {
-	return m.systemd.ListUnits()
-}
-
-func (m *UnitManager) GetUnitStates(filter set.Set) (map[string]*unit.UnitState, error) {
+// GetUnitStates return all units the have the prefix "vks."
+func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, error) {
 	// Unfortunately we need to lock for the entire operation to ensure we
 	// have a consistent view of the hashes. Otherwise, Load/Unload
 	// operations could mutate the hashes before we've retrieved the state
 	// for every unit in the filter, since they won't necessarily all be
 	// present in the initial ListUnits() call.
-	fallback := false
 
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	dbusStatuses, err := m.systemd.ListUnitsByNames(filter.Values())
-
+	dbusStatuses, err := m.systemd.ListUnits()
 	if err != nil {
-		fallback = true
-		dbusStatuses, err = m.systemd.ListUnits()
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	states := make(map[string]*unit.UnitState)
 	for _, dus := range dbusStatuses {
-		if fallback && !filter.Contains(dus.Name) {
-			// If filter could not be applied on DBus side, we will filter unit files here
+		if !strings.HasPrefix(dus.Name, prefix) {
 			continue
 		}
-
+		if !strings.HasSuffix(dus.Name, ".service") {
+			continue
+		}
 		us := &unit.UnitState{
 			LoadState:   dus.LoadState,
 			ActiveState: dus.ActiveState,
@@ -234,25 +226,6 @@ func (m *UnitManager) GetUnitStates(filter set.Set) (map[string]*unit.UnitState,
 			us.UnitHash = h.String()
 		}
 		states[dus.Name] = us
-	}
-
-	// grab data on subscribed units that didn't show up in ListUnits in fallback mode, most
-	// likely due to being inactive
-	if fallback {
-		for _, name := range filter.Values() {
-			if _, ok := states[name]; ok {
-				continue
-			}
-
-			us, err := m.getUnitState(name)
-			if err != nil {
-				return nil, err
-			}
-			if h, ok := m.hashes[name]; ok {
-				us.UnitHash = h.String()
-			}
-			states[name] = us
-		}
 	}
 
 	return states, nil

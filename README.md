@@ -52,3 +52,8 @@ draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.0
 
 You can now try to schedule a pod: `k3s/kubelet apply -f k3s/openssh-server.yaml`. This will call
 out and try to schedule.
+
+## Starting Pods
+
+When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
+unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`.
