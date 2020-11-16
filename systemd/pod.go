@@ -10,6 +10,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/miekg/vks/pkg/unit"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -21,8 +22,6 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
-	// focus on starting a unit first
-	return nil, nil
 	u, err := p.m.ListUnits()
 	if err != nil {
 		return nil, err
@@ -37,6 +36,47 @@ func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	println("CREATE PODS")
+	podUID := string(pod.UID)
+	// podCreationTimestamp := pod.CreationTimestamp.String()
+	/*
+		metadata.Labels = map[string]string{
+			"PodName":           pod.Name,
+			"ClusterName":       pod.ClusterName,
+			"NodeName":          pod.Spec.NodeName,
+			"Namespace":         pod.Namespace,
+			"UID":               podUID,
+			"CreationTimestamp": podCreationTimestamp,
+		}
+		metadata.Name = pod.Namespace + "-" + pod.Name
+	*/
+	for _, c := range pod.Spec.Containers {
+		// parse c.Image for tag
+		if err := p.Pkg.Install(c.Image, ""); err != nil {
+			return err
+		}
+		u, err := p.Pkg.Unitfile(c.Image)
+		if err != nil {
+			return err
+		}
+		name := "vks-" + c.Image + podUID
+		log.Printf("Starting unit %s, %s as %s", c.Name, c.Image, name)
+		buf, err := ioutil.ReadFile(u)
+		if err != nil {
+			return err
+		}
+		uf, err := unit.NewUnitFile(string(buf))
+		if err != nil {
+			return err
+		}
+		if err := p.m.Load(name, *uf); err != nil {
+			return err
+		}
+		if err := p.m.TriggerStart(name); err != nil {
+			return err
+		}
+
+	}
+	fmt.Printf("%v\n", pod.Spec.Containers)
 	fmt.Printf("+%v\n", pod)
 	return nil
 
