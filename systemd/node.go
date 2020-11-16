@@ -51,7 +51,7 @@ func (p *P) capacity() corev1.ResourceList {
 		"cpu":     resource.MustParse(system.CPU()),
 		"memory":  resource.MustParse(system.Memory()),
 		"pods":    resource.MustParse("110"), // entire PID space??
-		"storage": resource.MustParse("40G"),
+		"storage": resource.MustParse("40G"), // need to specify some write space somewhere
 	}
 }
 

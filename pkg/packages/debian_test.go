@@ -16,7 +16,8 @@ func TestDebian(t *testing.T) {
 	d := new(DebianPackageManager)
 	unit, err := d.Unitfile("openssh-server")
 	if err != nil {
-		t.Fatal(err)
+		// not installed
+		return
 	}
 	if unit == "" {
 		// not installed, just bail

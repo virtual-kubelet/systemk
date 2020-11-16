@@ -17,17 +17,18 @@ import (
 
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	states, err := p.m.GetUnitStates(Prefix)
+	units, err := p.m.GetUnitStates(Prefix)
 	if err != nil {
 		return nil, err
 	}
 	unitpref := UnitPrefix(namespace, name)
-	for name, s := range states {
-		if strings.HasPrefix(name, unitpref) {
-			fmt.Printf("GETPOD: %+v\n", s)
+	for name, _ := range units {
+		if !strings.HasPrefix(name, unitpref) {
+			delete(units, name)
 		}
 	}
-	return nil, nil
+	pod := unitToPod(units)
+	return pod, nil
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
@@ -35,6 +36,7 @@ func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 	if err != nil {
 		return nil, err
 	}
+	// sort unit by namespace/name
 	for name, s := range states {
 		fmt.Printf("GETPODS: %s: %+v\n", name, s)
 	}
@@ -52,7 +54,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			"UID":               podUID,
 			"CreationTimestamp": podCreationTimestamp,
 		}
-		metadata.Name = pod.Namespace + "-" + pod.Name
 	*/
 	// TODO: check if we have this pod (namespace/name??) already
 	uid := string(pod.UID)
@@ -89,42 +90,32 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *P) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
-	println("RUN IN CONTAINER")
-	// not implemented, because we can't
-	log.Printf("receive ExecInContainer %q\n", container)
+	log.Printf("receive RunInContainer %q\n", container)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running.
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	states, err := p.m.GetUnitStates(Prefix)
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
-	unitpref := UnitPrefix(namespace, name)
-	for name, s := range states {
-		if strings.HasPrefix(name, unitpref) {
-			fmt.Printf("GETPODSTATUS: %+v\n", s)
-		}
-	}
-	return nil, nil
+	return &pod.Status, nil
 }
 
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	println("GET CONTAINER LOGS")
 	return ioutil.NopCloser(strings.NewReader("not support in systemd provider")), nil
 }
 
 // UpdatePod is a noop,
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	println("UPDATE POD")
 	return nil
 }
 
 // DeletePod deletes
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	println("DELETE POD", pod.ObjectMeta.Name)
+	// get all units and unload them all
 	return nil
 }
 
@@ -144,6 +135,46 @@ func UidFromUnitName(name string) string {
 		return ""
 	}
 	return uid[sep+1:]
+}
+
+func Image(name string) string {
+	el := strings.Split(name, Separator) // assume well formed
+	if len(el) < 4 {
+		return ""
+	}
+	return el[3]
+}
+
+func Name(name string) string {
+	el := strings.Split(name, Separator) // assume well formed
+	if len(el) < 4 {
+		return ""
+	}
+	return el[1] + Separator + el[2]
+}
+
+func Pod(name string) string {
+	el := strings.Split(name, Separator) // assume well formed
+	if len(el) < 3 {
+		return ""
+	}
+	return el[2]
+}
+
+func UID(name string) string {
+	el := strings.Split(name, Separator) // assume well formed
+	if len(el) < 5 {
+		return ""
+	}
+	return el[4]
+}
+
+func Namespace(name string) string {
+	el := strings.Split(name, Separator) // assume well formed
+	if len(el) < 3 {
+		return ""
+	}
+	return el[1]
 }
 
 const (
