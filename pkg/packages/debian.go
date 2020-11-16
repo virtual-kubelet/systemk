@@ -40,10 +40,11 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 		}
 	}
 
-	installCmdArgs := []string{"-qq", "--force-yes", "install"}
+	pkgToInstall := pkg
 	if version != "" {
-		installCmdArgs = append(installCmdArgs, fmt.Sprintf("%s=%s*", pkg, version))
+		pkgToInstall = fmt.Sprintf("%s=%s*", pkg, version)
 	}
+	installCmdArgs := []string{"-qq", "--force-yes", "install", pkgToInstall}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 
 	_, err = installCmd.CombinedOutput()
