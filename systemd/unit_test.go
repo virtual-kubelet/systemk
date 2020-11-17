@@ -20,7 +20,7 @@ func TestNewUnit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	u, err := p.Pkg.Unitfile("openssh-server")
+	u, err := p.pkg.Unitfile("openssh-server")
 	if err != nil {
 		return // not installed
 	}
