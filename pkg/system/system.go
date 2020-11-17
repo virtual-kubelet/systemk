@@ -108,10 +108,15 @@ func ID() string {
 // Returns the PID space / 4 (/4 is random)
 func Pid() string {
 	buf, err := ioutil.ReadFile("/proc/sys/kernel/pid_max")
-	if err != nil {
+	if err != nil || len(buf) < 2 {
 		return ""
 	}
-	pid, _ := strconv.Atoi(string(buf))
+	buf = buf[:len(buf)-1] // strip newline
+	pid, err := strconv.Atoi(string(buf))
+	if err != nil {
+		println(err.Error())
+		return ""
+	}
 	pid = pid / 4
 	return strconv.Itoa(pid)
 }
