@@ -36,7 +36,6 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 	}
 	installCmdArgs := []string{"-qq", "--assume-yes", "install", pkgToInstall}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
-	// https://cowboyprogrammer.org/2016/10/dont-start-service-on-install-of-debian-package/
 	installCmd.Env = append(installCmd.Env, "POLICYRCD=/tmp/policy-donotstart")
 
 	println("Running apt")

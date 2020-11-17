@@ -64,8 +64,7 @@ unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`.
 
 1. Install *k3s* and compile the virtual kubelet.
 2. Install *policyrcd-script-zg2*: `apt-get install policyrcd-script-zg2` See
-   To install daemons without starting them you will need the `policyrcd-script-zg2` package. See
-   https://cowboyprogrammer.org/2016/10/dont-start-service-on-install-of-debian-package/
+   To install daemons without starting them you will need the `policyrcd-script-zg2` package.
 
 I'm using `uptimed` as a very simple daemon that you (probably) haven't got installed, so we can
 check the entire flow. My testing happens on Debian/Ubuntu.
