@@ -16,3 +16,10 @@ func TestMemory(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPid(t *testing.T) {
+	pids := Pid()
+	if pids == "" {
+		t.Fatal("expected pids to return number, got empty string")
+	}
+}
