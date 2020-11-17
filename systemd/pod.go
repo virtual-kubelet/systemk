@@ -123,8 +123,10 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("DeletePod called")
 	for _, c := range pod.Spec.Containers {
 		name := PodToUnitName(pod, c.Name)
-		err := p.m.Unload(name)
-		if err != nil {
+		if err := p.m.TriggerStop(name); err != nil {
+			log.Printf("Failed to triggger top: %s", err)
+		}
+		if err := p.m.Unload(name); err != nil {
 			log.Printf("Failed to unload: %s", err)
 		}
 	}
