@@ -57,10 +57,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			"CreationTimestamp": podCreationTimestamp,
 		}
 	*/
-	// TODO: check if we have this pod (namespace/name??) already
-	uid := string(pod.UID)
 	for _, c := range pod.Spec.Containers {
-		// parse c.Image for tag
+		// parse c.Image for tag?
 		if err := p.pkg.Install(c.Image, ""); err != nil {
 			return err
 		}
@@ -68,7 +66,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
-		name := PodToUnitName(pod.Namespace, pod.Name, c.Name, uid)
+		name := PodToUnitName(pod, c.Name)
 		log.Printf("Starting unit %s, %s as %s", c.Name, c.Image, name)
 		buf, err := ioutil.ReadFile(u)
 		if err != nil {
@@ -99,9 +97,13 @@ func (p *P) RunInContainer(ctx context.Context, namespace, name, container strin
 // GetPodStatus returns the status of a pod by name that is running.
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
+	log.Printf("GetPodStatus called")
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
+	}
+	if pod == nil {
+		return nil, nil
 	}
 	return &pod.Status, nil
 }
@@ -112,31 +114,29 @@ func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerN
 
 // UpdatePod is a noop,
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
+	log.Printf("UpdatePod called")
 	return nil
 }
 
 // DeletePod deletes
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	// get all units and unload them all
+	log.Printf("DeletePod called")
+	for _, c := range pod.Spec.Containers {
+		name := PodToUnitName(pod, c.Name)
+		err := p.m.Unload(name)
+		if err != nil {
+			log.Printf("Failed to unload: %s", err)
+		}
+	}
 	return nil
 }
 
-func PodToUnitName(namespace, name, image, uid string) string {
-	return UnitPrefix(namespace, name) + Separator + image + Separator + uid + ".service"
+func PodToUnitName(pod *corev1.Pod, image string) string {
+	return UnitPrefix(pod.Namespace, pod.Name) + Separator + image + Separator + string(pod.UID) + ".service"
 }
 
 func UnitPrefix(namespace, name string) string {
 	return Prefix + Separator + namespace + Separator + name
-}
-
-func UidFromUnitName(name string) string {
-	// maybe we should hide this and put into some kind of systemd metadata...
-	uid := name[:len(name)-len(".service")]
-	sep := strings.LastIndex(uid, Separator)
-	if sep == 0 {
-		return ""
-	}
-	return uid[sep+1:]
 }
 
 func Image(name string) string {

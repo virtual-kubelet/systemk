@@ -9,9 +9,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
+	if len(units) == 0 {
+		return nil
+	}
 	name := ""
 	status := ""
 	for k, v := range units {
@@ -32,7 +36,7 @@ func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
 			Name:        Pod(name),
 			Namespace:   Namespace(name),
 			ClusterName: "cluster.local",
-			//			UID:         UID(name),
+			UID:         types.UID(UID(name)),
 			//			CreationTimestamp: // do we know?
 		},
 		Spec: corev1.PodSpec{
@@ -61,8 +65,8 @@ func toContainers(units map[string]*unit.UnitState) []corev1.Container {
 	containers := make([]v1.Container, 0, len(units))
 	for _, k := range keys {
 		container := v1.Container{
-			Name:      Name(k),
-			Image:     Image(k),
+			Name:      Image(k),
+			Image:     Image(k),            // We not saving the image anywhere, this assume container.Name == container.Image
 			Command:   []string{"/bin/sh"}, // parse from unit file?
 			Resources: v1.ResourceRequirements{
 				/*

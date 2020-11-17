@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uptimed
+  labels:
+    name: uptimed
+spec:
+  containers:
+  - name: uptimed
+    image: uptimed
+    ports:
+    - containerPort: 2222
