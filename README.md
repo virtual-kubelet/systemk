@@ -9,6 +9,16 @@ Current Status:
 This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
 with K3S and go from there.
 
+Every Linux system has systemd nowadays. by utilzing k3s (just one Go binary) and this virtual
+kubelet you can provision a system using the Kubernetes API. The networking is the host's network,
+so it make sense to use this for more heavy weight (stateful?) applications.
+
+It is hoped this setup allows you to use the Kubernetes API without the need to immerse yourself in
+the (large) world of kubernetes (overlay networking, ingress objects, etc., etc.). However this
+_does_ imply networking and discovery (i.e.) DNS is already working on the system you're
+deploying this. How to get a system into a state it has, and can run, k3s and virtual-kubelet is an
+open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
+
 `vks` will start pods as plain processes, there are no cgroups (yet, maybe systemd will allow for
 this easily), but generally there is no isolation. You basically use the k8s control plane to start
 linux processes. There is also no address space allocated to the PODs specically, you are using the
@@ -18,6 +28,8 @@ host's networking.
 installed package is no longer used is hard, so this will not be done.
 
 Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones are managed by it.
+
+## Design
 
 ## Questions
 
