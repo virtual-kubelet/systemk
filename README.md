@@ -1,4 +1,8 @@
-NOTE: Work In Progress
+Current Status:
+
+* CreatePod, GetPod, GetPodStatus work
+* DeletePod might work
+* Tested on Ubuntu with `uptimed`
 
 # Virtual Kubelet for systemd
 
