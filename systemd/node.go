@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"context"
+	"net"
 
 	"github.com/miekg/vks/pkg/system"
 	corev1 "k8s.io/api/core/v1"
@@ -11,7 +12,7 @@ import (
 
 // ConfigureNode enables a provider to configure the node object that will be used for Kubernetes.
 func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
-	// POD CIDR??
+	// POD CIDR?? - there is no pid cidr so it all maps to the host IP?
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
@@ -34,10 +35,34 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 }
 
 // nodeAddresses returns a list of addresses for the node status within Kubernetes.
-func (p *P) nodeAddresses() []corev1.NodeAddress { return nil }
+func (p *P) nodeAddresses() []corev1.NodeAddress {
+	cidrs := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
+	rfc1918 := make([]*net.IPNet, len(cidrs))
+	for i, cidr := range cidrs {
+		_, block, _ := net.ParseCIDR(cidr)
+		rfc1918[i] = block
+	}
+
+	ips := system.IPs()
+	na := make([]corev1.NodeAddress, len(ips))
+	for i, ip := range ips {
+		for _, block := range rfc1918 {
+			na[i] = corev1.NodeAddress{
+				Address: ip.String(),
+				Type:    corev1.NodeExternalIP,
+			}
+			if block.Contains(ip) {
+				na[i].Type = corev1.NodeInternalIP
+			}
+		}
+	}
+	// corev1.NodeInternalDNS??
+	return na
+}
 
 // nodeDaemonEndpoints returns NodeDaemonEndpoints for the node status within Kubernetes.
 func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
+	// WTF is this actually
 	return corev1.NodeDaemonEndpoints{
 		KubeletEndpoint: corev1.DaemonEndpoint{
 			Port: 10, /* p.daemonEndpointPort,*/
