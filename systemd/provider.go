@@ -11,7 +11,7 @@ import (
 
 type P struct {
 	m   *manager.UnitManager
-	Pkg packages.PackageManager
+	pkg packages.PackageManager
 }
 
 func NewProvider() (*P, error) {
@@ -24,9 +24,9 @@ func NewProvider() (*P, error) {
 	default:
 		return nil, fmt.Errorf("unsupported system")
 	case "debian", "ubuntu":
-		p.Pkg = new(packages.DebianPackageManager)
+		p.pkg = new(packages.DebianPackageManager)
 	case "arch":
-		p.Pkg = new(packages.ArchlinuxPackageManager)
+		p.pkg = new(packages.ArchlinuxPackageManager)
 	}
 	return p, nil
 }

@@ -208,6 +208,7 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("%d statusses returned", len(dbusStatuses))
 
 	states := make(map[string]*unit.UnitState)
 	for _, dus := range dbusStatuses {
@@ -225,8 +226,11 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 		if h, ok := m.hashes[dus.Name]; ok {
 			us.UnitHash = h.String()
 		}
+		log.Printf("Valid one %q", us)
 		states[dus.Name] = us
 	}
+
+	log.Printf("Left with %d statuses", len(states))
 
 	return states, nil
 }

@@ -17,6 +17,7 @@ import (
 
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
+	log.Print("GetPod called")
 	units, err := p.m.GetUnitStates(Prefix)
 	if err != nil {
 		return nil, err
@@ -44,6 +45,7 @@ func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
+	log.Print("CreatedPod called")
 	// Can we store metadata somewhere within systemd units files?
 	/*
 		metadata.Labels = map[string]string{
@@ -59,10 +61,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	uid := string(pod.UID)
 	for _, c := range pod.Spec.Containers {
 		// parse c.Image for tag
-		if err := p.Pkg.Install(c.Image, ""); err != nil {
+		if err := p.pkg.Install(c.Image, ""); err != nil {
 			return err
 		}
-		u, err := p.Pkg.Unitfile(c.Image)
+		u, err := p.pkg.Unitfile(c.Image)
 		if err != nil {
 			return err
 		}
