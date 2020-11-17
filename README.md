@@ -31,11 +31,18 @@ Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones ar
 
 ## Design
 
+Pods can contain multiple container; each container is a new unit and tracked by systemd.
+
+When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
+unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`. This name will be
+parsed back into a Pod for method like "GetPod", "GetPodStatus", and "GetPods".
+
 ## Questions
 
-* Pods can contain multiple containers. In systemd each container is a Unit (file). How can we keep
-  track of these diff. Units and re-create the Pod when we need to?
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
+* Metadata where to store. There is more data available in the k8s API then systemd need. Should we
+  track this?
+* CPU and memory usage? I *think* systemd might now, but unsure how to fetch it.
 * How to provision a Debian system to be able to join a k3s cluster? Something very minimal is
   needed here. _Maybe_ getting to k3s super early will help. We can then install extra things to
   configure?
@@ -48,31 +55,27 @@ Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones ar
 ## Use with K3S
 
 Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use the `k3s/k3s` shell
-script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script basically starts k3s with
-basically _everything_ disabled.
+script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script starts k3s with basically
+*everything* disabled.
 
-Compile cmd/virtual-kubelet and start it with:
+Compile cmd/virtual-kubelet and start it with.
 
 ~~~
 sudo ./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
 --enable-node-lease --disable-taint
 ~~~
 
-Now a `k3s kubcetl get nodes` should show the virtual kubelet as a node:
+We need root to be allowed to install packages. Now a `k3s kubcetl get nodes` should show the
+virtual kubelet as a node:
+
 ~~~
 NAME    STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
 draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.04.1 LT   5.4.0-53-generic   systemd 245 (245.4-4ubuntu3.3)
 ~~~
 
-`draak` is my machine's name.
+`draak` is my machine's name. Networking (or figuring out how to map it to the k8s API) is still on
+the TODO list. You can now try to schedule a pod: `k3s/kubelet apply -f k3s/uptimed.yaml`.
 
-You can now try to schedule a pod: `k3s/kubelet apply -f k3s/openssh-server.yaml`. This will call
-out and try to schedule.
-
-## Starting Pods
-
-When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
-unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`.
 
 ## Playing With It
 
