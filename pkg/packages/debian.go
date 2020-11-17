@@ -4,50 +4,48 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system
-type DebianPackageManager struct{}
+type DebianPackageManager struct {
+	sync.RWMutex
+}
 
 const (
 	aptGetCommand                    = "/usr/bin/apt-get"
-	aptCacheCommand                  = "/usr/bin/apt-cache"
 	dpkgCommand                      = "/usr/bin/dpkg"
 	debianSystemdUnitfilesPathPrefix = "/lib/systemd/system/"
 )
 
-// Install install the given package at the given version
-// Does nothing if package is already installed
+// Install install the given package at the given version.
 func (p *DebianPackageManager) Install(pkg, version string) error {
-	checkCmdArgs := []string{
-		"show",
-		pkg,
-	}
-	checkCmd := exec.Command(aptCacheCommand, checkCmdArgs...)
+	p.Lock()
+	defer p.Unlock()
 
-	err := checkCmd.Run()
-	if err == nil {
-		// package exists
-		// TODO: check installed version
-		return nil
-	}
-	if exitError, ok := err.(*exec.ExitError); ok {
-		if exitError.ExitCode() != 100 { // 100 is No packages found
-			return fmt.Errorf("failed to check existence of package %s: %w", pkg, err)
-		}
-	}
-
+	log.Printf("Debian: Install: %s=%s", pkg, version)
+	setup()
 	pkgToInstall := pkg
 	if version != "" {
 		pkgToInstall = fmt.Sprintf("%s=%s*", pkg, version)
 	}
-	installCmdArgs := []string{"-qq", "--force-yes", "install", pkgToInstall}
+	installCmdArgs := []string{"-qq", "--assume-yes", "install", pkgToInstall}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
+	// https://cowboyprogrammer.org/2016/10/dont-start-service-on-install-of-debian-package/
+	installCmd.Env = append(installCmd.Env, "POLICYRCD=/tmp/policy-donotstart")
 
-	_, err = installCmd.CombinedOutput()
+	println("Running apt")
+	out, err := installCmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Failed to install: %s\n%s", err, out)
+	} else {
+		log.Printf("Installed %s", pkgToInstall)
+	}
 	return err
 }
 
@@ -79,4 +77,12 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	return basicPath, nil
+}
+
+func setup() error {
+	err := ioutil.WriteFile("/tmp/policy-donotstart", []byte("exit 101\n"), 0755)
+	if err != nil {
+		log.Printf("Failed setup: %s", err)
+	}
+	return nil
 }

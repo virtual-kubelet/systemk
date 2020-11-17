@@ -57,3 +57,26 @@ out and try to schedule.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
 unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`.
+
+## Playing With It
+
+### Debian
+
+1. Install *k3s* and compile the virtual kubelet.
+2. Install *policyrcd-script-zg2*: `apt-get install policyrcd-script-zg2` See
+   To install daemons without starting them you will need the `policyrcd-script-zg2` package. See
+   https://www.alextomkins.com/2018/03/runlevel-apt-get-install-package-alternative/
+
+I'm using `uptimed` as a very simple daemon that you (probably) haven't got installed, so we can
+check the entire flow. My testing happens on Debian/Ubuntu.
+
+3. `./k3s/kubectl apply -f uptimed.yaml`
+
+The above *should* yield:
+
+~~~
+NAME      READY   STATUS    RESTARTS   AGE
+uptimed   1/1     Running   0          7m42s
+~~~
+
+You can then delete the pod.
