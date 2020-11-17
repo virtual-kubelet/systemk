@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 )
 
 // Memory returns the amount of memory in the system.
@@ -102,4 +103,15 @@ func ID() string {
 	}
 	id = id[:j]
 	return string(id)
+}
+
+// Returns the PID space / 4 (/4 is random)
+func Pid() string {
+	buf, err := ioutil.ReadFile("/proc/sys/kernel/pid_max")
+	if err != nil {
+		return ""
+	}
+	pid, _ := strconv.Atoi(string(buf))
+	pid = pid / 4
+	return strconv.Itoa(pid)
 }
