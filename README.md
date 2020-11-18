@@ -29,6 +29,11 @@ installed package is no longer used is hard, so this will not be done.
 
 Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones are managed by it.
 
+## Building
+
+Use `go build` in the top level directory, this should give you a `vks` binary which is the virtual
+kubelet.
+
 ## Design
 
 Pods can contain multiple container; each container is a new unit and tracked by systemd.
@@ -61,8 +66,7 @@ script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script starts k
 Compile cmd/virtual-kubelet and start it with.
 
 ~~~
-sudo ./cmd/virtual-kubelet/virtual-kubelet --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig \
---enable-node-lease --disable-taint
+sudo ./vks --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --enable-node-lease --disable-taint
 ~~~
 
 We need root to be allowed to install packages. Now a `k3s kubcetl get nodes` should show the
@@ -75,7 +79,6 @@ draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.0
 
 `draak` is my machine's name. Networking (or figuring out how to map it to the k8s API) is still on
 the TODO list. You can now try to schedule a pod: `k3s/kubelet apply -f k3s/uptimed.yaml`.
-
 
 ## Playing With It
 
