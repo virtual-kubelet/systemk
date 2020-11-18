@@ -115,7 +115,6 @@ func Pid() string {
 	buf = buf[:len(buf)-1] // strip newline
 	pid, err := strconv.Atoi(string(buf))
 	if err != nil {
-		println(err.Error())
 		return ""
 	}
 	pid = pid / 4

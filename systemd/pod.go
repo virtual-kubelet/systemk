@@ -58,7 +58,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 	*/
 	for _, c := range pod.Spec.Containers {
-		// parse c.Image for tag?
+		// TODO(miek): parse c.Image for tag to get version
 		if err := p.pkg.Install(c.Image, ""); err != nil {
 			return err
 		}
@@ -72,6 +72,11 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
+
+		// Inject all the metadata into it
+		meta := objectMetaToSection(pod.ObjectMeta)
+		buf = append(buf, meta...)
+
 		uf, err := unit.NewUnitFile(string(buf))
 		if err != nil {
 			return err
@@ -134,7 +139,7 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 }
 
 func PodToUnitName(pod *corev1.Pod, image string) string {
-	return UnitPrefix(pod.Namespace, pod.Name) + Separator + image + Separator + string(pod.UID) + ".service"
+	return UnitPrefix(pod.Namespace, pod.Name) + Separator + image + ".service"
 }
 
 func UnitPrefix(namespace, name string) string {
@@ -143,15 +148,15 @@ func UnitPrefix(namespace, name string) string {
 
 func Image(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 4 {
+	if len(el) < 3 {
 		return ""
 	}
-	return el[3]
+	return el[2]
 }
 
 func Name(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 4 {
+	if len(el) < 3 {
 		return ""
 	}
 	return el[1] + Separator + el[2]
@@ -163,14 +168,6 @@ func Pod(name string) string {
 		return ""
 	}
 	return el[2]
-}
-
-func UID(name string) string {
-	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 5 {
-		return ""
-	}
-	return el[4]
 }
 
 func Namespace(name string) string {
