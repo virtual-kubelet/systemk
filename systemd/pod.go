@@ -4,7 +4,6 @@ package systemd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -32,31 +31,38 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 	return pod, nil
 }
 
-func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
+func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 	states, err := p.m.GetStates(Prefix)
 	if err != nil {
 		return nil, err
 	}
-	// sort unit by namespace/name
-	for name, s := range states {
-		fmt.Printf("GETPODS: %s: %+v\n", name, s)
+	if len(states) == 0 {
+		return nil, nil
 	}
-	return nil, nil
+
+	// Get all the names and then we just call GetPod for each.
+	ns := map[string][]string{} // namespace/ pod(s) mapping
+
+	// sort unit by namespace/name
+	for name := range states {
+		namespace := Namespace(name)
+		pod := Pod(name)
+		ns[namespace] = append(ns[namespace], pod)
+	}
+
+	pods := []*corev1.Pod{}
+	for namespace, names := range ns {
+		for _, name := range names {
+			if pod, err := p.GetPod(ctx, namespace, name); err != nil {
+				pods = append(pods, pod)
+			}
+		}
+	}
+	return pods, nil
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Print("CreatedPod called")
-	// Can we store metadata somewhere within systemd units files?
-	/*
-		metadata.Labels = map[string]string{
-			"PodName":           pod.Name,
-			"ClusterName":       pod.ClusterName,
-			"NodeName":          pod.Spec.NodeName,
-			"Namespace":         pod.Namespace,
-			"UID":               podUID,
-			"CreationTimestamp": podCreationTimestamp,
-		}
-	*/
 	for _, c := range pod.Spec.Containers {
 		// TODO(miek): parse c.Image for tag to get version
 		if err := p.pkg.Install(c.Image, ""); err != nil {
@@ -73,7 +79,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 
-		// Inject all the metadata into it
+		// Inject all the metadata into it.
 		meta := objectMetaToSection(pod.ObjectMeta)
 		buf = append(buf, meta...)
 
@@ -95,6 +101,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *P) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+	// Should we just try to start something? But with what user???
 	log.Printf("receive RunInContainer %q\n", container)
 	return nil
 }
@@ -119,11 +126,11 @@ func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerN
 
 // UpdatePod is a noop,
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	log.Printf("UpdatePod called")
+	log.Printf("UpdatePod called - not implemented")
 	return nil
 }
 
-// DeletePod deletes
+// DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("DeletePod called")
 	for _, c := range pod.Spec.Containers {
