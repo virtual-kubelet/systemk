@@ -3,10 +3,12 @@ package systemd
 // copied from virtual kubelet zun
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"io/ioutil"
 	"log"
+	"os/exec"
 	"strings"
 
 	"github.com/miekg/vks/pkg/unit"
@@ -121,7 +123,14 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 }
 
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	return ioutil.NopCloser(strings.NewReader("not support in systemd provider")), nil
+	log.Printf("GetContainerLogs called")
+
+	unitname := UnitPrefix(namespace, podName) + separator + containerName
+	args := []string{"-u", unitname}
+	cmd := exec.Command("journalctl", args...)
+	// returns the buffers? What about following, use pipes here or something?
+	buf, err := cmd.CombinedOutput()
+	return ioutil.NopCloser(bytes.NewReader(buf)), err
 }
 
 // UpdatePod is a noop,
@@ -145,12 +154,12 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	return nil
 }
 
-func PodToUnitName(pod *corev1.Pod, image string) string {
-	return UnitPrefix(pod.Namespace, pod.Name) + separator + image + ".service"
+func PodToUnitName(pod *corev1.Pod, containerName string) string {
+	return UnitPrefix(pod.Namespace, pod.Name) + separator + containerName + unit.ServiceSuffix
 }
 
-func UnitPrefix(namespace, name string) string {
-	return Prefix + separator + namespace + separator + name
+func UnitPrefix(namespace, podName string) string {
+	return Prefix + separator + namespace + separator + podName
 }
 
 func Image(name string) string {
