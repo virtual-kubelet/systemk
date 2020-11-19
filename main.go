@@ -48,7 +48,7 @@ func main() {
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
 		cli.WithProvider("systemd", func(_ provider.InitConfig) (provider.Provider, error) {
-			return systemd.NewProvider()
+			return systemd.New()
 		}),
 	)
 

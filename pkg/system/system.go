@@ -106,7 +106,7 @@ func ID() string {
 	return string(id)
 }
 
-// Returns the PID space / 4 (/4 is random)
+// Pid returns the PID space / 4.
 func Pid() string {
 	buf, err := ioutil.ReadFile("/proc/sys/kernel/pid_max")
 	if err != nil || len(buf) < 2 {
@@ -121,6 +121,7 @@ func Pid() string {
 	return strconv.Itoa(pid)
 }
 
+// IPs returns the IP addresses found on the interfaces.
 func IPs() []net.IP {
 	ifaces, err := net.Interfaces()
 	if err != nil {

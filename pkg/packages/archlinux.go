@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/miekg/vks/pkg/unit"
 )
 
 // ArchlinuxPackageManager implemtents the PackageManager interface for an Archlinux system
@@ -56,7 +58,7 @@ func (p *ArchlinuxPackageManager) Unitfile(pkg string) (string, error) {
 		if !strings.HasPrefix(splitLine[1], archlinuxSystemdUnitfilesPathPrefix) {
 			continue
 		}
-		if strings.HasSuffix(splitLine[1], SystemdUnitfileSuffix) {
+		if strings.HasSuffix(splitLine[1], unit.ServiceSuffix) {
 			return splitLine[1], nil
 		}
 	}
@@ -66,7 +68,7 @@ func (p *ArchlinuxPackageManager) Unitfile(pkg string) (string, error) {
 	}
 
 	// if not found, scan the directory to see if we can spot one
-	basicPath := archlinuxSystemdUnitfilesPathPrefix + pkg + SystemdUnitfileSuffix
+	basicPath := archlinuxSystemdUnitfilesPathPrefix + pkg + unit.ServiceSuffix
 	if _, err := os.Stat(basicPath); err != nil {
 		return "", err
 	}

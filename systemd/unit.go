@@ -15,18 +15,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
+func unitToPod(units map[string]*unit.State) *corev1.Pod {
 	if len(units) == 0 {
 		return nil
 	}
 	name := ""
 	// Pick a random unit, the things we care about should be identical btween them.
 	// This identify is however not checked.
-	for k, _ := range units {
+	for k := range units {
 		name = k
 		break
 	}
-	uf, err := unit.NewUnitFile(units[name].UnitData)
+	uf, err := unit.New(units[name].UnitData)
 	if err != nil {
 		log.Printf("error while parsing unit file %s", err)
 	}
@@ -69,7 +69,7 @@ func unitToPod(units map[string]*unit.UnitState) *corev1.Pod {
 	return p
 }
 
-func toContainers(units map[string]*unit.UnitState) []corev1.Container {
+func toContainers(units map[string]*unit.State) []corev1.Container {
 	keys := unitNames(units)
 	containers := make([]v1.Container, 0, len(units))
 	for _, k := range keys {
@@ -96,7 +96,7 @@ func toContainers(units map[string]*unit.UnitState) []corev1.Container {
 	return containers
 }
 
-func toContainerStatuses(units map[string]*unit.UnitState) []corev1.ContainerStatus {
+func toContainerStatuses(units map[string]*unit.State) []corev1.ContainerStatus {
 	keys := unitNames(units)
 	statuses := make([]v1.ContainerStatus, 0, len(units))
 	for _, k := range keys {
@@ -116,7 +116,7 @@ func toContainerStatuses(units map[string]*unit.UnitState) []corev1.ContainerSta
 	return statuses
 }
 
-func containerState(u *unit.UnitState) v1.ContainerState {
+func containerState(u *unit.State) v1.ContainerState {
 	// Handle the case where the container is running.
 	if u.ActiveState == "active" {
 		return v1.ContainerState{
@@ -148,7 +148,7 @@ func containerState(u *unit.UnitState) v1.ContainerState {
 	}
 }
 
-func unitNames(units map[string]*unit.UnitState) []string {
+func unitNames(units map[string]*unit.State) []string {
 	keys := make([]string, len(units))
 	i := 0
 	for k := range units {

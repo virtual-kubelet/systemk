@@ -28,17 +28,17 @@ func activeStateToPodConditions(status string, transitiontime metav1.Time) []cor
 	switch status {
 	case "active":
 		return []corev1.PodCondition{
-			corev1.PodCondition{
+			{
 				Type:               corev1.PodReady,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: transitiontime,
 			},
-			corev1.PodCondition{
+			{
 				Type:               corev1.PodInitialized,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: transitiontime,
 			},
-			corev1.PodCondition{
+			{
 				Type:               corev1.PodScheduled,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: transitiontime,

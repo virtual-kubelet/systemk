@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+
+	"github.com/miekg/vks/pkg/unit"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system
@@ -62,7 +64,7 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		if !strings.HasPrefix(scanner.Text(), debianSystemdUnitfilesPathPrefix) {
 			continue
 		}
-		if strings.HasSuffix(scanner.Text(), SystemdUnitfileSuffix) {
+		if strings.HasSuffix(scanner.Text(), unit.ServiceSuffix) {
 			return scanner.Text(), nil
 		}
 	}
@@ -71,7 +73,7 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	// if not found, scan the directory to see if we can spot one
-	basicPath := debianSystemdUnitfilesPathPrefix + pkg + SystemdUnitfileSuffix
+	basicPath := debianSystemdUnitfilesPathPrefix + pkg + unit.ServiceSuffix
 	if _, err := os.Stat(basicPath); err != nil {
 		return "", err
 	}

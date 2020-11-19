@@ -15,7 +15,7 @@ func TestNewUnit(t *testing.T) {
 	default:
 		return
 	}
-	p, err := NewProvider()
+	p, err := New()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestNewUnit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	uf, err := unit.NewUnitFile(string(buf))
+	uf, err := unit.New(string(buf))
 	if err != nil {
 		t.Fatal(err)
 	}
