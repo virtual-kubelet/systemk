@@ -16,7 +16,4 @@ func TestNameSplitting(t *testing.T) {
 	if x := Namespace(name); x != "default" {
 		t.Errorf("expected Namespace to be %s, got %s", "default", x)
 	}
-	if x := UID(name); x != "d1d316c0-d10d-4653-940a-31d808efb4a7" {
-		t.Errorf("expected UID to be %s, got %s", "d1d316c0-d10d-4653-940a-31d808efb4a7", x)
-	}
 }
