@@ -84,8 +84,24 @@ NAME    STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE   
 draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.04.1 LT   5.4.0-53-generic   systemd 245 (245.4-4ubuntu3.3)
 ~~~
 
-`draak` is my machine's name. Networking (or figuring out how to map it to the k8s API) is still on
-the TODO list. You can now try to schedule a pod: `k3s/kubelet apply -f k3s/uptimed.yaml`.
+`draak` is my machine's name. You can now try to schedule a pod: `k3s/kubelet apply -f
+k3s/uptimed.yaml`.
+
+Logging works, but due to TLS, is a bit fiddly, you need to start `vks` with --certfile and
+--keyfile to make the HTTPS endpoint happy (enough). Once that's done you can get the logs with:
+
+~~~
+% ./kubectl logs --insecure-skip-tls-verify-backend=true uptimed
+-- Logs begin at Mon 2020-08-24 09:00:18 CEST, end at Thu 2020-11-19 15:40:02 CET. --
+nov 19 12:12:27 draak systemd[1]: Started uptime record daemon.
+nov 19 12:14:44 draak uptimed[15245]: uptimed: no useable database found.
+nov 19 12:14:44 draak systemd[1]: Stopping uptime record daemon...
+nov 19 12:14:44 draak systemd[1]: vks.default.uptimed.uptimed.service: Succeeded.
+nov 19 12:14:44 draak systemd[1]: Stopped uptime record daemon.
+nov 19 13:38:54 draak systemd[1]: Started uptime record daemon.
+nov 19 13:39:26 draak systemd[1]: Stopping uptime record daemon...
+nov 19 13:39:26 draak systemd[1]: vks.default.uptimed.uptimed.service: Succeeded.
+~~~
 
 ## Playing With It
 
