@@ -1,15 +1,9 @@
-Current Status:
-
-* CreatePod, GetPod, GetPodStatus work
-* DeletePod might work
-* Tested on Ubuntu with `uptimed`
-
 # Virtual Kubelet for systemd
 
 This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
 with K3S and go from there.
 
-Every Linux system has systemd nowadays. by utilzing k3s (just one Go binary) and this virtual
+Every Linux system has systemd nowadays. By utilizing k3s (just one Go binary) and this virtual
 kubelet you can provision a system using the Kubernetes API. The networking is the host's network,
 so it make sense to use this for more heavy weight (stateful?) applications.
 
@@ -21,13 +15,22 @@ open questions (ready made image, a tiny bit of config mgmt (but how to bootstra
 
 `vks` will start pods as plain processes, there are no cgroups (yet, maybe systemd will allow for
 this easily), but generally there is no isolation. You basically use the k8s control plane to start
-linux processes. There is also no address space allocated to the PODs specically, you are using the
+linux processes. There is also no address space allocated to the PODs specially, you are using the
 host's networking.
 
-"Images" are referencing (Debian) packages, these will be apt-get installed. Discoverying that an
+"Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
 installed package is no longer used is hard, so this will not be done.
 
-Each scheduled unit will adhere to a nameing scheme so `vks` knows which ones are managed by it.
+Each scheduled unit will adhere to a naming scheme so `vks` knows which ones are managed by it.
+
+## Current Status
+
+All testing has be done with k3s/uptimed.yaml which only runs 1 containers. But creating, inspecting
+and deleting pods works.
+
+Getting logs also works, but the UI for it could be better - needs some extra setup.
+
+Storage/configmaps isn't done at all currently.
 
 ## Building
 
@@ -59,10 +62,6 @@ process isolation. Starting two pods that use the same port is guaranteed to fai
   configure?
 * Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
   Debian. I need to add a repo for this... How?
-* If imagePullPolicy is set to Always, then apt-get install the binary ? If not check if the "image"
-  can be found in $PATH and use it?
-* namespaces?? Are they useful on a technical level for systemd? Right now they are used for naming
-  only.
 
 ## Use with K3S
 
@@ -70,7 +69,7 @@ Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use t
 script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script starts k3s with basically
 *everything* disabled.
 
-Compile cmd/virtual-kubelet and start it with.
+Compile `vks` and start it with.
 
 ~~~
 sudo ./vks --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --enable-node-lease --disable-taint
