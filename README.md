@@ -39,14 +39,20 @@ kubelet.
 Pods can contain multiple container; each container is a new unit and tracked by systemd.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
-unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.<uid>.service`. This name will be
-parsed back into a Pod for method like "GetPod", "GetPodStatus", and "GetPods".
+unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`.
+
+We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
+know a pod state vks will query systemd and read the unit file back. This way we know the status and
+have access to all the meta data.
+
+### Limitations
+
+By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
+process isolation. Starting two pods that use the same port is guaranteed to fail for one.
 
 ## Questions
 
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
-* Metadata where to store. There is more data available in the k8s API then systemd need. Should we
-  track this?
 * CPU and memory usage? I *think* systemd might now, but unsure how to fetch it.
 * How to provision a Debian system to be able to join a k3s cluster? Something very minimal is
   needed here. _Maybe_ getting to k3s super early will help. We can then install extra things to
@@ -55,7 +61,8 @@ parsed back into a Pod for method like "GetPod", "GetPodStatus", and "GetPods".
   Debian. I need to add a repo for this... How?
 * If imagePullPolicy is set to Always, then apt-get install the binary ? If not check if the "image"
   can be found in $PATH and use it?
-* namespaces?? Are they useful on a technical level for systemd?
+* namespaces?? Are they useful on a technical level for systemd? Right now they are used for naming
+  only.
 
 ## Use with K3S
 

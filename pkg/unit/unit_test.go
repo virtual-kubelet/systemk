@@ -108,21 +108,6 @@ func TestDefaultUnitType(t *testing.T) {
 	}
 }
 
-func TestNewUnitState(t *testing.T) {
-	want := &UnitState{
-		LoadState:   "ls",
-		ActiveState: "as",
-		SubState:    "ss",
-		MachineID:   "id",
-	}
-
-	got := NewUnitState("ls", "as", "ss", "id")
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("NewUnitState did not create a correct UnitState: got %s, want %s", got, want)
-	}
-
-}
-
 func TestNamedUnit(t *testing.T) {
 	tts := []struct {
 		fname  string
@@ -367,41 +352,6 @@ nonsense upon stilts
 	for _, tt := range bad {
 		if _, err := NewUnitFile(tt); err == nil {
 			t.Fatalf("Did not get expected error creating Unit from %q", tt)
-		}
-	}
-}
-
-func TestParseMultivalueLine(t *testing.T) {
-	tests := []struct {
-		in  string
-		out []string
-	}{
-		{`"bar" "ping" "pong"`, []string{`bar`, `ping`, `pong`}},
-		{`"bar"`, []string{`bar`}},
-		{``, []string{""}},
-		{`""`, []string{``}},
-		{`"bar`, []string{`"bar`}},
-		{`bar"`, []string{`bar"`}},
-		{`foo\"bar`, []string{`foo\"bar`}},
-
-		{
-			`"bar" "`,
-			[]string{`bar`, ``},
-			//TODO(bcwaldon): should be something like this:
-			// []string{`bar`},
-		},
-
-		{
-			`"foo\"bar"`,
-			[]string{`foo\bar`},
-			//TODO(bcwaldon): should be something like this:
-			// []string{`foo\"bar`},
-		},
-	}
-	for i, tt := range tests {
-		out := parseMultivalueLine(tt.in)
-		if !reflect.DeepEqual(tt.out, out) {
-			t.Errorf("case %d:, epected %v, got %v", i, tt.out, out)
 		}
 	}
 }

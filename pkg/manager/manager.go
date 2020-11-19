@@ -218,6 +218,7 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 		if !strings.HasSuffix(dus.Name, ".service") {
 			continue
 		}
+		// TODO(miek): think about this state more
 		if dus.LoadState == "not-found" { // skip, or only not skip when loaded?
 			continue
 		}
@@ -229,7 +230,10 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 		if h, ok := m.hashes[dus.Name]; ok {
 			us.UnitHash = h.String()
 		}
-		log.Printf("Valid one %q", us)
+		if buf, err := m.readUnit(dus.Name); err == nil {
+			// this should not error, but ... TODO(miek)
+			us.UnitData = buf
+		}
 		states[dus.Name] = us
 	}
 
