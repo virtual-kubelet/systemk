@@ -3,7 +3,7 @@ package systemd
 import "testing"
 
 func TestNameSplitting(t *testing.T) {
-	name := "vks.default.openssh-server.openssh-server-image.d1d316c0-d10d-4653-940a-31d808efb4a7.service"
+	name := "vks.default.openssh-server.openssh-server-image.service"
 	if x := Image(name); x != "openssh-server-image" {
 		t.Errorf("expected Image to be %s, got %s", "openssh-server-image", x)
 	}

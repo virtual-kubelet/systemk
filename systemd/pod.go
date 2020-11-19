@@ -148,15 +148,15 @@ func UnitPrefix(namespace, name string) string {
 
 func Image(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 3 {
+	if len(el) < 4 {
 		return ""
 	}
-	return el[2]
+	return el[3]
 }
 
 func Name(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 3 {
+	if len(el) < 4 {
 		return ""
 	}
 	return el[1] + Separator + el[2]
@@ -164,7 +164,7 @@ func Name(name string) string {
 
 func Pod(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 3 {
+	if len(el) < 4 {
 		return ""
 	}
 	return el[2]
@@ -172,7 +172,7 @@ func Pod(name string) string {
 
 func Namespace(name string) string {
 	el := strings.Split(name, Separator) // assume well formed
-	if len(el) < 3 {
+	if len(el) < 4 {
 		return ""
 	}
 	return el[1]
