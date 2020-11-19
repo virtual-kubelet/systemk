@@ -9,12 +9,14 @@ import (
 	"github.com/virtual-kubelet/node-cli/provider"
 )
 
+// P is a systemd provider.
 type P struct {
 	m   *manager.UnitManager
 	pkg packages.PackageManager
 }
 
-func NewProvider() (*P, error) {
+// New returns a new systemd provider.
+func New() (*P, error) {
 	m, err := manager.New("/tmp/bla", false)
 	if err != nil {
 		return nil, err

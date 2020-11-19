@@ -18,12 +18,12 @@ import (
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	log.Print("GetPod called")
-	units, err := p.m.GetUnitStates(Prefix)
+	units, err := p.m.GetStates(Prefix)
 	if err != nil {
 		return nil, err
 	}
 	unitpref := UnitPrefix(namespace, name)
-	for name, _ := range units {
+	for name := range units {
 		if !strings.HasPrefix(name, unitpref) {
 			delete(units, name)
 		}
@@ -33,7 +33,7 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(_ context.Context) ([]*corev1.Pod, error) {
-	states, err := p.m.GetUnitStates(Prefix)
+	states, err := p.m.GetStates(Prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		meta := objectMetaToSection(pod.ObjectMeta)
 		buf = append(buf, meta...)
 
-		uf, err := unit.NewUnitFile(string(buf))
+		uf, err := unit.New(string(buf))
 		if err != nil {
 			return err
 		}
@@ -139,15 +139,15 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 }
 
 func PodToUnitName(pod *corev1.Pod, image string) string {
-	return UnitPrefix(pod.Namespace, pod.Name) + Separator + image + ".service"
+	return UnitPrefix(pod.Namespace, pod.Name) + separator + image + ".service"
 }
 
 func UnitPrefix(namespace, name string) string {
-	return Prefix + Separator + namespace + Separator + name
+	return Prefix + separator + namespace + separator + name
 }
 
 func Image(name string) string {
-	el := strings.Split(name, Separator) // assume well formed
+	el := strings.Split(name, separator) // assume well formed
 	if len(el) < 4 {
 		return ""
 	}
@@ -155,15 +155,15 @@ func Image(name string) string {
 }
 
 func Name(name string) string {
-	el := strings.Split(name, Separator) // assume well formed
+	el := strings.Split(name, separator) // assume well formed
 	if len(el) < 4 {
 		return ""
 	}
-	return el[1] + Separator + el[2]
+	return el[1] + separator + el[2]
 }
 
 func Pod(name string) string {
-	el := strings.Split(name, Separator) // assume well formed
+	el := strings.Split(name, separator) // assume well formed
 	if len(el) < 4 {
 		return ""
 	}
@@ -171,7 +171,7 @@ func Pod(name string) string {
 }
 
 func Namespace(name string) string {
-	el := strings.Split(name, Separator) // assume well formed
+	el := strings.Split(name, separator) // assume well formed
 	if len(el) < 4 {
 		return ""
 	}
@@ -179,6 +179,7 @@ func Namespace(name string) string {
 }
 
 const (
+	// Prefix the unit file prefix we used.
 	Prefix    = "vks"
-	Separator = "."
+	separator = "."
 )

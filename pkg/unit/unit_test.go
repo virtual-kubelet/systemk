@@ -20,7 +20,7 @@ import (
 )
 
 func TestUnitHash(t *testing.T) {
-	u, err := NewUnitFile("[Service]\nExecStart=/bin/sleep 100\n")
+	u, err := New("[Service]\nExecStart=/bin/sleep 100\n")
 	if err != nil {
 		t.Fatalf("Unexpected error encountered creating unit: %v", err)
 	}
@@ -45,19 +45,19 @@ func TestUnitHash(t *testing.T) {
 }
 
 func TestHashFromHexString(t *testing.T) {
-	u, err := NewUnitFile("[Service]\nExecStart=/bin/sleep 100\n")
+	u, err := New("[Service]\nExecStart=/bin/sleep 100\n")
 	if err != nil {
 		t.Fatalf("Unexpected error encountered creating unit: %v", err)
 	}
 	gotHash := u.Hash()
 
 	expectHashString := "1c6fb6f3684bafb0c173d8b8b957ceff031180c1"
-	rehashed, err := HashFromHexString(expectHashString)
+	rehashed, err := hashFromHexString(expectHashString)
 	if err != nil {
-		t.Fatalf("HashFromHexString failed with: %v", err)
+		t.Fatalf("hashFromHexString failed with: %v", err)
 	}
 	if rehashed != gotHash {
-		t.Fatalf("HashFromHexString not equal to original hash")
+		t.Fatalf("hashFromHexString not equal to original hash")
 	}
 }
 
@@ -128,43 +128,42 @@ func TestNamedUnit(t *testing.T) {
 		{"ssh@1.socket", "ssh@1", "ssh", "ssh@.socket", "1", true, false},
 	}
 	for _, tt := range tts {
-		u := NewUnitNameInfo(tt.fname)
+		u := NewNameInfo(tt.fname)
 		if u == nil {
-			t.Errorf("NewUnitNameInfo(%s) returned nil InstanceUnit!", tt.name)
+			t.Errorf("NewNameInfo(%s) returned nil InstanceUnit!", tt.name)
 			continue
 		}
 		if u.FullName != tt.fname {
-			t.Errorf("NewUnitNameInfo(%s) returned bad fullname: got %s, want %s", tt.name, u.FullName, tt.fname)
+			t.Errorf("NewNameInfo(%s) returned bad fullname: got %s, want %s", tt.name, u.FullName, tt.fname)
 		}
 		if u.Name != tt.name {
-			t.Errorf("NewUnitNameInfo(%s) returned bad name: got %s, want %s", tt.name, u.Name, tt.name)
+			t.Errorf("NewNameInfo(%s) returned bad name: got %s, want %s", tt.name, u.Name, tt.name)
 		}
 		if u.Template != tt.tmpl {
-			t.Errorf("NewUnitNameInfo(%s) returned bad template name: got %s, want %s", tt.name, u.Template, tt.tmpl)
+			t.Errorf("NewNameInfo(%s) returned bad template name: got %s, want %s", tt.name, u.Template, tt.tmpl)
 		}
 		if u.Prefix != tt.pref {
-			t.Errorf("NewUnitNameInfo(%s) returned bad prefix name: got %s, want %s", tt.name, u.Prefix, tt.pref)
+			t.Errorf("NewNameInfo(%s) returned bad prefix name: got %s, want %s", tt.name, u.Prefix, tt.pref)
 		}
 		if u.Instance != tt.inst {
-			t.Errorf("NewUnitNameInfo(%s) returned bad instance name: got %s, want %s", tt.name, u.Instance, tt.inst)
+			t.Errorf("NewNameInfo(%s) returned bad instance name: got %s, want %s", tt.name, u.Instance, tt.inst)
 		}
 		i := u.IsInstance()
 		if i != tt.isinst {
-			t.Errorf("NewUnitNameInfo(%s).IsInstance returned %t, want %t", tt.name, i, tt.isinst)
+			t.Errorf("NewNameInfo(%s).IsInstance returned %t, want %t", tt.name, i, tt.isinst)
 		}
 		i = u.IsTemplate()
 		if i != tt.istmpl {
-			t.Errorf("NewUnitNameInfo(%s).IsTemplate returned %t, want %t", tt.name, i, tt.istmpl)
+			t.Errorf("NewNameInfo(%s).IsTemplate returned %t, want %t", tt.name, i, tt.istmpl)
 		}
 	}
 
 	bad := []string{"foo", "bar@baz"}
 	for _, tt := range bad {
-		if NewUnitNameInfo(tt) != nil {
-			t.Errorf("NewUnitNameInfo returned non-nil InstanceUnit unexpectedly")
+		if NewNameInfo(tt) != nil {
+			t.Errorf("NewNameInfo returned non-nil InstanceUnit unexpectedly")
 		}
 	}
-
 }
 
 func TestDeserialize(t *testing.T) {
@@ -198,7 +197,7 @@ MachineMetadata=baz=qux
 		},
 	}
 
-	unitFile, err := NewUnitFile(contents)
+	unitFile, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -222,7 +221,7 @@ ExecStart=jim
 			"<<<<<<<<<<<": {"bar"},
 		},
 	}
-	unitFile, err := NewUnitFile(contents)
+	unitFile, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -263,7 +262,7 @@ ng"`},
 pung`},
 		},
 	}
-	unitFile, err := NewUnitFile(contents)
+	unitFile, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -278,7 +277,7 @@ func TestSerializeDeserialize(t *testing.T) {
 [Unit]
 Description = Foo
 `
-	deserialized, err := NewUnitFile(contents)
+	deserialized, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -288,7 +287,7 @@ Description = Foo
 	}
 
 	serialized := deserialized.String()
-	deserialized, err = NewUnitFile(serialized)
+	deserialized, err = New(serialized)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", serialized, err)
 	}
@@ -309,7 +308,7 @@ ExecStart=echo "ping";
 ExecStop=echo "pong";
 `
 
-	unitFile, err := NewUnitFile(contents)
+	unitFile, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -327,7 +326,7 @@ ExecStart=echo "ping";
 ExecStop=echo "pong";
 `
 
-	unitFile, err := NewUnitFile(contents)
+	unitFile, err := New(contents)
 	if err != nil {
 		t.Fatalf("Unexpected error parsing unit %q: %v", contents, err)
 	}
@@ -350,7 +349,7 @@ nonsense upon stilts
 `,
 	}
 	for _, tt := range bad {
-		if _, err := NewUnitFile(tt); err == nil {
+		if _, err := New(tt); err == nil {
 			t.Fatalf("Did not get expected error creating Unit from %q", tt)
 		}
 	}

@@ -24,18 +24,20 @@ import (
 	"github.com/miekg/go-systemd/unit"
 )
 
-func NewUnitFile(raw string) (*UnitFile, error) {
+// New returns a new unit file parsed from raw.
+func New(raw string) (*File, error) {
 	reader := strings.NewReader(raw)
 	opts, err := unit.Deserialize(reader)
 	if err != nil {
 		return nil, err
 	}
 
-	return NewUnitFromOptions(opts), nil
+	return newFromOptions(opts), nil
 }
 
-func NewUnitFromOptions(opts []*unit.UnitOption) *UnitFile {
-	return &UnitFile{mapOptions(opts), opts}
+// newFromOptions returns a new unit file parsed from opts.
+func newFromOptions(opts []*unit.UnitOption) *File {
+	return &File{mapOptions(opts), opts}
 }
 
 func mapOptions(opts []*unit.UnitOption) map[string]map[string][]string {
@@ -55,14 +57,14 @@ func mapOptions(opts []*unit.UnitOption) map[string]map[string][]string {
 	return contents
 }
 
-// A UnitFile represents a systemd configuration which encodes information about any of the unit
+// A File represents a systemd configuration which encodes information about any of the unit
 // types that fleet supports (as defined in SupportedUnitTypes()).
-// UnitFiles are linked to Units by the Hash of their contents.
-// Similar to systemd, a UnitFile configuration has no inherent name, but is rather
+// Files are linked to Units by the Hash of their contents.
+// Similar to systemd, a File configuration has no inherent name, but is rather
 // named through the reference to it; in the case of systemd, the reference is
 // the filename, and in the case of fleet, the reference is the name of the Unit
-// that references this UnitFile.
-type UnitFile struct {
+// that references this File.
+type File struct {
 	// Contents represents the parsed unit file.
 	// This field must be considered readonly.
 	Contents map[string]map[string][]string
@@ -72,30 +74,30 @@ type UnitFile struct {
 
 // Description returns the first Description option found in the [Unit] section.
 // If the option is not defined, an empty string is returned.
-func (u *UnitFile) Description() string {
+func (u *File) Description() string {
 	if values := u.Contents["Unit"]["Description"]; len(values) > 0 {
 		return values[0]
 	}
 	return ""
 }
 
-func (u *UnitFile) Bytes() []byte {
+func (u *File) bytes() []byte {
 	b, _ := ioutil.ReadAll(unit.Serialize(u.Options))
 	return b
 }
 
-func (u *UnitFile) String() string {
-	return string(u.Bytes())
+func (u *File) String() string {
+	return string(u.bytes())
 }
 
 // Hash returns the SHA1 hash of the raw contents of the Unit
-func (u *UnitFile) Hash() Hash {
-	return Hash(sha1.Sum(u.Bytes()))
+func (u *File) Hash() Hash {
+	return Hash(sha1.Sum(u.bytes()))
 }
 
-// MatchUnitFiles compares two unitFiles
+// MatchFiles compares two unitFiles
 // Returns true if the units match, false otherwise.
-func MatchUnitFiles(a *UnitFile, b *UnitFile) bool {
+func MatchFiles(a *File, b *File) bool {
 	if a.Hash() == b.Hash() {
 		return true
 	}
@@ -119,26 +121,30 @@ func RecognizedUnitType(name string) bool {
 // DefaultUnitType appends the default unit type to a given unit name, ignoring
 // any file extensions that already exist.
 func DefaultUnitType(name string) string {
-	return fmt.Sprintf("%s.service", name)
+	return fmt.Sprintf("%s%s", name, ServiceSuffix)
 }
 
-// SHA1 sum
-// Do we need the hashing, we can't start identical pod anyway...?
+// ServiceSuffix is the suffix for service files. This includes the dot.
+const ServiceSuffix = ".service"
+
+// Hash is the SHa1 sum of the unit file.
 type Hash [sha1.Size]byte
 
 func (h Hash) String() string {
 	return fmt.Sprintf("%x", h[:])
 }
 
+// Short returns the short hash (first 8 characters).
 func (h Hash) Short() string {
 	return fmt.Sprintf("%.7s", h)
 }
 
+// Empty returns true if h is the empty hash.
 func (h *Hash) Empty() bool {
 	return *h == Hash{}
 }
 
-func HashFromHexString(key string) (Hash, error) {
+func hashFromHexString(key string) (Hash, error) {
 	h := Hash{}
 	out, err := hex.DecodeString(key)
 	if err != nil {
@@ -151,8 +157,8 @@ func HashFromHexString(key string) (Hash, error) {
 	return h, nil
 }
 
-// UnitState encodes the current state of a unit loaded into a vks agent
-type UnitState struct {
+// State encodes the current state of a unit loaded into a vks agent
+type State struct {
 	LoadState   string
 	ActiveState string
 	SubState    string
@@ -162,11 +168,11 @@ type UnitState struct {
 	UnitData    string // the unit file as written to disk
 }
 
-// UnitNameInfo exposes certain interesting items about a Unit based on its
+// NameInfo exposes certain interesting items about a Unit based on its
 // name. For example, a unit with the name "foo@.service" constitutes a
 // template unit, and a unit named "foo@1.service" would represent an instance
 // unit of that template.
-type UnitNameInfo struct {
+type NameInfo struct {
 	FullName string // Original complete name of the unit (e.g. foo.socket, foo@bar.service)
 	Name     string // Name of the unit without suffix (e.g. foo, foo@bar)
 	Prefix   string // Prefix of the template unit (e.g. foo)
@@ -176,21 +182,21 @@ type UnitNameInfo struct {
 	Instance string // Instance name (e.g. bar)
 }
 
-// IsInstance returns a boolean indicating whether the UnitNameInfo appears to be
+// IsInstance returns a boolean indicating whether the NameInfo appears to be
 // an Instance of a Template unit
-func (nu UnitNameInfo) IsInstance() bool {
+func (nu NameInfo) IsInstance() bool {
 	return len(nu.Instance) > 0
 }
 
-// IsTemplate returns a boolean indicating whether the UnitNameInfo appears to be
+// IsTemplate returns a boolean indicating whether the NameInfo appears to be
 // a Template unit
-func (nu UnitNameInfo) IsTemplate() bool {
+func (nu NameInfo) IsTemplate() bool {
 	return len(nu.Template) > 0 && !nu.IsInstance()
 }
 
-// NewUnitNameInfo generates a UnitNameInfo from the given name. If the given string
+// NewNameInfo generates a nitNameInfo from the given name. If the given string
 // is not a correct unit name, nil is returned.
-func NewUnitNameInfo(un string) *UnitNameInfo {
+func NewNameInfo(un string) *NameInfo {
 
 	// Everything past the first @ and before the last . is the instance
 	s := strings.LastIndex(un, ".")
@@ -198,7 +204,7 @@ func NewUnitNameInfo(un string) *UnitNameInfo {
 		return nil
 	}
 
-	nu := &UnitNameInfo{FullName: un}
+	nu := &NameInfo{FullName: un}
 	name := un[:s]
 	suffix := un[s:]
 	nu.Name = name

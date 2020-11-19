@@ -38,6 +38,7 @@ type UnitManager struct {
 	mutex  sync.RWMutex
 }
 
+// New returns a pointer to an initialized UnitManager.
 func New(uDir string, systemdUser bool) (*UnitManager, error) {
 	var systemd *dbus.Conn
 	var err error
@@ -93,7 +94,7 @@ func hashUnitFile(loc string) (unit.Hash, error) {
 		return unit.Hash{}, err
 	}
 
-	uf, err := unit.NewUnitFile(string(b))
+	uf, err := unit.New(string(b))
 	if err != nil {
 		return unit.Hash{}, err
 	}
@@ -103,7 +104,7 @@ func hashUnitFile(loc string) (unit.Hash, error) {
 
 // Load writes the given Unit to disk, subscribing to relevant dbus
 // events and caching the Unit's Hash.
-func (m *UnitManager) Load(name string, u unit.UnitFile) error {
+func (m *UnitManager) Load(name string, u unit.File) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	err := m.writeUnit(name, u.String())
@@ -151,12 +152,12 @@ func (m *UnitManager) TriggerStop(name string) error {
 	return nil
 }
 
-// GetUnitState generates a UnitState object representing the
+// GetState generates a State object representing the
 // current state of a Unit
-func (m *UnitManager) GetUnitState(name string) (*unit.UnitState, error) {
+func (m *UnitManager) GetState(name string) (*unit.State, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	us, err := m.getUnitState(name)
+	us, err := m.getState(name)
 	if err != nil {
 		return nil, err
 	}
@@ -166,12 +167,12 @@ func (m *UnitManager) GetUnitState(name string) (*unit.UnitState, error) {
 	return us, nil
 }
 
-func (m *UnitManager) getUnitState(name string) (*unit.UnitState, error) {
+func (m *UnitManager) getState(name string) (*unit.State, error) {
 	info, err := m.systemd.GetUnitProperties(name)
 	if err != nil {
 		return nil, err
 	}
-	us := unit.UnitState{
+	us := unit.State{
 		LoadState:   info["LoadState"].(string),
 		ActiveState: info["ActiveState"].(string),
 		SubState:    info["SubState"].(string),
@@ -188,14 +189,15 @@ func (m *UnitManager) readUnit(name string) (string, error) {
 	return "", fmt.Errorf("no unit file at local path %s", path)
 }
 
+// ReloadUnitFiles tells systemd to reload all unit files.
 func (m *UnitManager) ReloadUnitFiles() error { return m.systemd.Reload() }
 
 // Units enumerates all files recognized as valid systemd units in
 // this manager's units directory.
 func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) }
 
-// GetUnitStates return all units the have the prefix "vks."
-func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, error) {
+// GetStates return all units the have the prefix "vks."
+func (m *UnitManager) GetStates(prefix string) (map[string]*unit.State, error) {
 	// Unfortunately we need to lock for the entire operation to ensure we
 	// have a consistent view of the hashes. Otherwise, Load/Unload
 	// operations could mutate the hashes before we've retrieved the state
@@ -210,7 +212,7 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 	}
 	log.Printf("%d statusses returned", len(dbusStatuses))
 
-	states := make(map[string]*unit.UnitState)
+	states := make(map[string]*unit.State)
 	for _, dus := range dbusStatuses {
 		if !strings.HasPrefix(dus.Name, prefix) {
 			continue
@@ -222,7 +224,7 @@ func (m *UnitManager) GetUnitStates(prefix string) (map[string]*unit.UnitState, 
 		if dus.LoadState == "not-found" { // skip, or only not skip when loaded?
 			continue
 		}
-		us := &unit.UnitState{
+		us := &unit.State{
 			LoadState:   dus.LoadState,
 			ActiveState: dus.ActiveState,
 			SubState:    dus.SubState,
