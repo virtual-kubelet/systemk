@@ -13,6 +13,9 @@ import (
 type P struct {
 	m   *manager.UnitManager
 	pkg packages.PackageManager
+
+	DaemonPort    int32
+	ClusterDomain string
 }
 
 // New returns a new systemd provider.

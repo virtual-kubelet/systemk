@@ -3,7 +3,9 @@ module github.com/miekg/vks
 go 1.15
 
 require (
+	github.com/gorilla/mux v1.7.3
 	github.com/miekg/go-systemd v0.0.0-20201113131452-5b28b7ed4aa7
+	github.com/spf13/pflag v1.0.5
 	github.com/virtual-kubelet/node-cli v0.3.1
 	github.com/virtual-kubelet/virtual-kubelet v1.3.0
 	k8s.io/api v0.18.4

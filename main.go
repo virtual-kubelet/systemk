@@ -16,11 +16,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/miekg/vks/pkg/system"
 	"github.com/miekg/vks/systemd"
+	"github.com/spf13/pflag"
 	cli "github.com/virtual-kubelet/node-cli"
 	"github.com/virtual-kubelet/node-cli/opts"
 	"github.com/virtual-kubelet/node-cli/provider"
@@ -33,6 +37,14 @@ var (
 )
 
 func main() {
+	var (
+		certFile string
+		keyFile  string
+	)
+	flags := pflag.NewFlagSet("client", pflag.ContinueOnError)
+	flags.StringVar(&certFile, "certfile", "", "certfile")
+	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
+
 	ctx := cli.ContextWithCancelOnSignal(context.Background())
 
 	o, err := opts.FromEnv()
@@ -45,10 +57,35 @@ func main() {
 
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
+		cli.WithPersistentFlags(flags),
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
-		cli.WithProvider("systemd", func(_ provider.InitConfig) (provider.Provider, error) {
-			return systemd.New()
+		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {
+			logs := true
+			if certFile == "" || keyFile == "" {
+				logs = false
+				log.Printf("Not certificates found, disabling GetContainerLogs")
+			}
+			p, err := systemd.New()
+			if err != nil {
+				return p, err
+			}
+
+			if logs {
+				r := mux.NewRouter()
+				r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
+				r.NotFoundHandler = http.HandlerFunc(p.NotFound)
+				go func() {
+					err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
+					if err != nil {
+						log.Fatal(err)
+					}
+				}()
+			}
+
+			p.DaemonPort = cfg.DaemonPort
+			p.ClusterDomain = cfg.KubeClusterDomain
+			return p, nil
 		}),
 	)
 

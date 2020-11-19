@@ -62,10 +62,10 @@ func (p *P) nodeAddresses() []corev1.NodeAddress {
 
 // nodeDaemonEndpoints returns NodeDaemonEndpoints for the node status within Kubernetes.
 func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
-	// WTF is this actually
+	// use for logs
 	return corev1.NodeDaemonEndpoints{
 		KubeletEndpoint: corev1.DaemonEndpoint{
-			Port: 10, /* p.daemonEndpointPort,*/
+			Port: p.DaemonPort,
 		},
 	}
 }
