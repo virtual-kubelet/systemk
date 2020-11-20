@@ -74,6 +74,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
+		log.Printf("Unit file found at %q", u)
 		name := PodToUnitName(pod, c.Name)
 		log.Printf("Starting unit %s, %s as %s", c.Name, c.Image, name)
 		buf, err := ioutil.ReadFile(u)
@@ -87,12 +88,15 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		uf, err := unit.New(string(buf))
 		if err != nil {
+			log.Printf("Failed to unit.New: %s", err)
 			return err
 		}
 		if err := p.m.Load(name, *uf); err != nil {
+			log.Printf("Failed to load unit: %s", err)
 			return err
 		}
 		if err := p.m.TriggerStart(name); err != nil {
+			log.Printf("Failed to trigger start: %s", err)
 			return err
 		}
 

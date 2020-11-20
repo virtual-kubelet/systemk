@@ -40,7 +40,6 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 	installCmd.Env = append(installCmd.Env, "POLICYRCD=/tmp/policy-donotstart")
 
-	println("Running apt")
 	out, err := installCmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Failed to install: %s\n%s", err, out)

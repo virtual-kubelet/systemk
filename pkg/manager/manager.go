@@ -220,10 +220,7 @@ func (m *UnitManager) GetStates(prefix string) (map[string]*unit.State, error) {
 		if !strings.HasSuffix(dus.Name, ".service") {
 			continue
 		}
-		// TODO(miek): think about this state more
-		if dus.LoadState == "not-found" { // skip, or only not skip when loaded?
-			continue
-		}
+		log.Printf("Added state for unit %q", dus.Name)
 		us := &unit.State{
 			LoadState:   dus.LoadState,
 			ActiveState: dus.ActiveState,

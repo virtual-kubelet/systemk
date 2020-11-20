@@ -31,6 +31,11 @@ func unitToPod(units map[string]*unit.State) *corev1.Pod {
 		log.Printf("error while parsing unit file %s", err)
 	}
 
+	if _, ok := uf.Contents[kubernetesSection]; !ok {
+		log.Printf("Unit did not container %s section", kubernetesSection)
+		return nil
+	}
+
 	// See objectMetaToSection.
 	om := metav1.ObjectMeta{
 		Name:        Pod(name),

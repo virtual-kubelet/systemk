@@ -61,27 +61,24 @@ func main() {
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
 		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {
-			logs := true
-			if certFile == "" || keyFile == "" {
-				logs = false
-				log.Printf("Not certificates found, disabling GetContainerLogs")
-			}
 			p, err := systemd.New(cfg)
 			if err != nil {
 				return p, err
 			}
-
-			if logs {
-				r := mux.NewRouter()
-				r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
-				r.NotFoundHandler = http.HandlerFunc(p.NotFound)
-				go func() {
-					err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
-					if err != nil {
-						log.Fatal(err)
-					}
-				}()
+			if certFile == "" || keyFile == "" {
+				log.Printf("Not certificates found, disabling GetContainerLogs")
+				return p, nil
 			}
+
+			r := mux.NewRouter()
+			r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
+			r.NotFoundHandler = http.HandlerFunc(p.NotFound)
+			go func() {
+				err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}()
 			return p, nil
 		}),
 	)
