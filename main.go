@@ -66,7 +66,7 @@ func main() {
 				logs = false
 				log.Printf("Not certificates found, disabling GetContainerLogs")
 			}
-			p, err := systemd.New()
+			p, err := systemd.New(cfg)
 			if err != nil {
 				return p, err
 			}
@@ -82,9 +82,6 @@ func main() {
 					}
 				}()
 			}
-
-			p.DaemonPort = cfg.DaemonPort
-			p.ClusterDomain = cfg.KubeClusterDomain
 			return p, nil
 		}),
 	)
