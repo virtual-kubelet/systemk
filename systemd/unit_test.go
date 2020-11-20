@@ -6,6 +6,7 @@ import (
 
 	"github.com/miekg/vks/pkg/system"
 	"github.com/miekg/vks/pkg/unit"
+	"github.com/virtual-kubelet/node-cli/provider"
 )
 
 func TestNewUnit(t *testing.T) {
@@ -15,7 +16,7 @@ func TestNewUnit(t *testing.T) {
 	default:
 		return
 	}
-	p, err := New()
+	p, err := New(provider.InitConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
