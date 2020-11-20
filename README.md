@@ -65,6 +65,23 @@ We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section.
 know a pod state vks will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
 
+Storage is handled by systemd. `PrivateMounts=true` is used to make things private and we inject the
+following into the unit to isolate it further and make generic path like `/var/run/secrets/...` work
+*per unit*.
+
+(`foo` is the pod UID)
+~~~
+PrivateMounts=true
+CacheDirectory=foo
+StateDirectory=foo
+RuntimeDirectory=foo
+PrivateTmp=true
+BindPaths=/var/run/foo:/var/run
+~~~
+
+This probably requires `JoinNamespaceOf` in other units that make up the pod as well. (not yet
+implemented or tested).
+
 ### Limitations
 
 By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
