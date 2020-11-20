@@ -19,7 +19,9 @@ linux processes. There is also no address space allocated to the PODs specially,
 host's networking.
 
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
-installed package is no longer used is hard, so this will not be done.
+installed package is no longer used is hard, so this will not be done. `vks` will reuse the unit
+file that comes from this install. However some other data is inject into it to make it work fully
+for vks.
 
 Each scheduled unit will adhere to a naming scheme so `vks` knows which ones are managed by it.
 
@@ -31,8 +33,8 @@ config management can give you? I.e. with `kubectl` you can find which machines 
 server, with *deployments* you can more safely push out upgrades, "insert favorite Kubernetes
 feature here".
 
-Monitoring only requires prometheus to discover the pods via the Kubenetes API, vasly simplying that
-particular setup.
+Monitoring only requires prometheus to discover the pods via the Kubenetes API, vastly simplifying
+that particular setup.
 
 I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt-get upgrade, fiddle
 with config files etc. It may turn of that k3s + vks is a better way of handling even *2* machines.
@@ -47,7 +49,7 @@ and deleting pods works.
 
 Getting logs also works, but the UI for it could be better - needs some extra setup.
 
-Storage/configmaps isn't done at all currently.
+Storage/configmaps isn't done at all currently, but there is a plan.
 
 ## Building
 
@@ -56,7 +58,7 @@ kubelet.
 
 ## Design
 
-Pods can contain multiple container; each container is a new unit and tracked by systemd.
+Pods can contain multiple containers; each container is a new unit and tracked by systemd.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
 unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`.
