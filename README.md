@@ -23,6 +23,23 @@ installed package is no longer used is hard, so this will not be done.
 
 Each scheduled unit will adhere to a naming scheme so `vks` knows which ones are managed by it.
 
+## Is This Useful?
+
+Unclear. I personally consider this (once it fully works) useful enough to manage a small farm of
+machines. Say you administer 200 machines and you need saner management and introspection than
+config management can give you? I.e. with `kubectl` you can find which machines didn't run a DNS
+server, with *deployments* you can more safely push out upgrades, "insert favorite Kubernetes
+feature here".
+
+Monitoring only requires prometheus to discover the pods via the Kubenetes API, vasly simplying that
+particular setup.
+
+I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt-get upgrade, fiddle
+with config files etc. It may turn of that k3s + vks is a better way of handling even *2* machines.
+
+Note that getting to the stage where this all runs, is secured and everything has the correct TLS
+certs (that are also rotated) is an open question.
+
 ## Current Status
 
 All testing has be done with k3s/uptimed.yaml which only runs 1 containers. But creating, inspecting
@@ -57,9 +74,6 @@ process isolation. Starting two pods that use the same port is guaranteed to fai
 
 * Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
 * CPU and memory usage? I *think* systemd might now, but unsure how to fetch it.
-* How to provision a Debian system to be able to join a k3s cluster? Something very minimal is
-  needed here. _Maybe_ getting to k3s super early will help. We can then install extra things to
-  configure?
 * Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
   Debian. I need to add a repo for this... How?
 
