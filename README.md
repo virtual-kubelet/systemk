@@ -1,9 +1,9 @@
 # Virtual Kubelet for systemd
 
 This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
-with K3S and go from there.
+with [K3s](https://github.com/rancher/k3s/) and go from there.
 
-Every Linux system has systemd nowadays. By utilizing k3s (just one Go binary) and this virtual
+Every Linux system has systemd nowadays. By utilizing K3s (just one Go binary) and this virtual
 kubelet you can provision a system using the Kubernetes API. The networking is the host's network,
 so it make sense to use this for more heavy weight (stateful?) applications.
 
@@ -156,3 +156,9 @@ uptimed   1/1     Running   0          7m42s
 ~~~
 
 You can then delete the pod.
+
+## Naming
+
+* Currently it's 'vks' - virtual kubelet systemd
+* systemk popped up on twitter, which I quite like
+* others?
