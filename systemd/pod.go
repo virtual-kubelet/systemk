@@ -81,16 +81,15 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			return err
 		}
-
-		// Inject all the metadata into it.
-		meta := objectMetaToSection(pod.ObjectMeta)
-		buf = append(buf, meta...)
-
 		uf, err := unit.New(string(buf))
 		if err != nil {
 			log.Printf("Failed to unit.New: %s", err)
 			return err
 		}
+		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
+		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
+		uf = uf.Insert(kubernetesSection, "uid", string(pod.ObjectMeta.UID))
+
 		if err := p.m.Load(name, *uf); err != nil {
 			log.Printf("Failed to load unit: %s", err)
 			return err

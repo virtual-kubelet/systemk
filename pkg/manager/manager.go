@@ -34,8 +34,7 @@ type UnitManager struct {
 	systemd  *dbus.Conn
 	unitsDir string
 
-	hashes map[string]unit.Hash
-	mutex  sync.RWMutex
+	mutex sync.RWMutex
 }
 
 // New returns a pointer to an initialized UnitManager.
@@ -55,55 +54,16 @@ func New(uDir string, systemdUser bool) (*UnitManager, error) {
 		return nil, err
 	}
 
-	hashes, err := hashUnitFiles(uDir)
-	if err != nil {
-		return nil, err
-	}
-
 	mgr := UnitManager{
 		systemd:  systemd,
 		unitsDir: uDir,
-		hashes:   hashes,
 		mutex:    sync.RWMutex{},
 	}
 	return &mgr, nil
 }
 
-func hashUnitFiles(dir string) (map[string]unit.Hash, error) {
-	uNames, err := lsUnitsDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	hMap := make(map[string]unit.Hash)
-	for _, uName := range uNames {
-		h, err := hashUnitFile(path.Join(dir, uName))
-		if err != nil {
-			return nil, err
-		}
-
-		hMap[uName] = h
-	}
-
-	return hMap, nil
-}
-
-func hashUnitFile(loc string) (unit.Hash, error) {
-	b, err := ioutil.ReadFile(loc)
-	if err != nil {
-		return unit.Hash{}, err
-	}
-
-	uf, err := unit.New(string(b))
-	if err != nil {
-		return unit.Hash{}, err
-	}
-
-	return uf.Hash(), nil
-}
-
 // Load writes the given Unit to disk, subscribing to relevant dbus
-// events and caching the Unit's Hash.
+// events.
 func (m *UnitManager) Load(name string, u unit.File) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -118,16 +78,13 @@ func (m *UnitManager) Load(name string, u unit.File) error {
 			return fmt.Errorf("Failed to enable systemd unit %s: %v", name, err)
 		}
 	}
-	m.hashes[name] = u.Hash()
 	return nil
 }
 
-// Unload removes the indicated unit from the filesystem, deletes its
-// associated Hash from the cache and clears its unit status in systemd
+// Unload removes the indicated unit from the filesystem, and clears its unit status in systemd
 func (m *UnitManager) Unload(name string) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	delete(m.hashes, name)
 	return m.removeUnit(name)
 }
 
@@ -160,9 +117,6 @@ func (m *UnitManager) GetState(name string) (*unit.State, error) {
 	us, err := m.getState(name)
 	if err != nil {
 		return nil, err
-	}
-	if h, ok := m.hashes[name]; ok {
-		us.UnitHash = h.String()
 	}
 	return us, nil
 }
@@ -198,14 +152,6 @@ func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) 
 
 // GetStates return all units the have the prefix "vks."
 func (m *UnitManager) GetStates(prefix string) (map[string]*unit.State, error) {
-	// Unfortunately we need to lock for the entire operation to ensure we
-	// have a consistent view of the hashes. Otherwise, Load/Unload
-	// operations could mutate the hashes before we've retrieved the state
-	// for every unit in the filter, since they won't necessarily all be
-	// present in the initial ListUnits() call.
-
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	dbusStatuses, err := m.systemd.ListUnits()
 	if err != nil {
 		return nil, err
@@ -225,9 +171,6 @@ func (m *UnitManager) GetStates(prefix string) (map[string]*unit.State, error) {
 			LoadState:   dus.LoadState,
 			ActiveState: dus.ActiveState,
 			SubState:    dus.SubState,
-		}
-		if h, ok := m.hashes[dus.Name]; ok {
-			us.UnitHash = h.String()
 		}
 		if buf, err := m.readUnit(dus.Name); err == nil {
 			// this should not error, but ... TODO(miek)
@@ -289,7 +232,7 @@ func (m *UnitManager) getUnitFilePath(name string) string {
 
 func lsUnitsDir(dir string) ([]string, error) {
 	filterFunc := func(name string) bool {
-		if !unit.RecognizedUnitType(name) {
+		if !strings.HasSuffix(name, unit.ServiceSuffix) {
 			log.Printf("Found unrecognized file in %s, ignoring", path.Join(dir, name))
 			return true
 		}

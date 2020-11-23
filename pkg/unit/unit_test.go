@@ -19,77 +19,6 @@ import (
 	"testing"
 )
 
-func TestUnitHash(t *testing.T) {
-	u, err := New("[Service]\nExecStart=/bin/sleep 100\n")
-	if err != nil {
-		t.Fatalf("Unexpected error encountered creating unit: %v", err)
-	}
-
-	gotHash := u.Hash()
-	gotHashString := gotHash.String()
-	expectHashString := "1c6fb6f3684bafb0c173d8b8b957ceff031180c1"
-	if gotHashString != expectHashString {
-		t.Fatalf("Unit Hash (%s) does not match expected (%s)", gotHashString, expectHashString)
-	}
-
-	expectHashShort := "1c6fb6f"
-	gotHashShort := gotHash.Short()
-	if gotHashShort != expectHashShort {
-		t.Fatalf("Unit Hash short (%s) does not match expected (%s)", gotHashShort, expectHashShort)
-	}
-
-	eh := &Hash{}
-	if !eh.Empty() {
-		t.Fatalf("Empty hash check failed: %v", eh.Empty())
-	}
-}
-
-func TestHashFromHexString(t *testing.T) {
-	u, err := New("[Service]\nExecStart=/bin/sleep 100\n")
-	if err != nil {
-		t.Fatalf("Unexpected error encountered creating unit: %v", err)
-	}
-	gotHash := u.Hash()
-
-	expectHashString := "1c6fb6f3684bafb0c173d8b8b957ceff031180c1"
-	rehashed, err := hashFromHexString(expectHashString)
-	if err != nil {
-		t.Fatalf("hashFromHexString failed with: %v", err)
-	}
-	if rehashed != gotHash {
-		t.Fatalf("hashFromHexString not equal to original hash")
-	}
-}
-
-func TestRecognizedUnitTypes(t *testing.T) {
-	tts := []struct {
-		name string
-		ok   bool
-	}{
-		{"foo.service", true},
-		{"foo.socket", true},
-		{"foo.path", true},
-		{"foo.timer", true},
-		{"foo.mount", true},
-		{"foo.automount", true},
-		{"foo.device", true},
-		{"foo.swap", false},
-		{"foo.target", false},
-		{"foo.snapshot", false},
-		{"foo.network", false},
-		{"foo.netdev", false},
-		{"foo.link", false},
-		{"foo.unknown", false},
-	}
-
-	for _, tt := range tts {
-		ok := RecognizedUnitType(tt.name)
-		if ok != tt.ok {
-			t.Errorf("Case failed: name=%s expect=%t result=%t", tt.name, tt.ok, ok)
-		}
-	}
-}
-
 func TestDefaultUnitType(t *testing.T) {
 	tts := []struct {
 		name string
@@ -104,64 +33,6 @@ func TestDefaultUnitType(t *testing.T) {
 		out := DefaultUnitType(tt.name)
 		if out != tt.out {
 			t.Errorf("Case failed: name=%s expect=%s result=%s", tt.name, tt.out, out)
-		}
-	}
-}
-
-func TestNamedUnit(t *testing.T) {
-	tts := []struct {
-		fname  string
-		name   string
-		pref   string
-		tmpl   string
-		inst   string
-		isinst bool
-		istmpl bool
-	}{
-		{"foo.service", "foo", "foo", "", "", false, false},
-		{"foo@.service", "foo@", "foo", "foo@.service", "", false, true},
-		{"foo@bar.service", "foo@bar", "foo", "foo@.service", "bar", true, false},
-		{"foo@bar@baz.service", "foo@bar@baz", "foo", "foo@.service", "bar@baz", true, false},
-		{"foo.1@.service", "foo.1@", "foo.1", "foo.1@.service", "", false, true},
-		{"foo.1@2.service", "foo.1@2", "foo.1", "foo.1@.service", "2", true, false},
-		{"ssh@.socket", "ssh@", "ssh", "ssh@.socket", "", false, true},
-		{"ssh@1.socket", "ssh@1", "ssh", "ssh@.socket", "1", true, false},
-	}
-	for _, tt := range tts {
-		u := NewNameInfo(tt.fname)
-		if u == nil {
-			t.Errorf("NewNameInfo(%s) returned nil InstanceUnit!", tt.name)
-			continue
-		}
-		if u.FullName != tt.fname {
-			t.Errorf("NewNameInfo(%s) returned bad fullname: got %s, want %s", tt.name, u.FullName, tt.fname)
-		}
-		if u.Name != tt.name {
-			t.Errorf("NewNameInfo(%s) returned bad name: got %s, want %s", tt.name, u.Name, tt.name)
-		}
-		if u.Template != tt.tmpl {
-			t.Errorf("NewNameInfo(%s) returned bad template name: got %s, want %s", tt.name, u.Template, tt.tmpl)
-		}
-		if u.Prefix != tt.pref {
-			t.Errorf("NewNameInfo(%s) returned bad prefix name: got %s, want %s", tt.name, u.Prefix, tt.pref)
-		}
-		if u.Instance != tt.inst {
-			t.Errorf("NewNameInfo(%s) returned bad instance name: got %s, want %s", tt.name, u.Instance, tt.inst)
-		}
-		i := u.IsInstance()
-		if i != tt.isinst {
-			t.Errorf("NewNameInfo(%s).IsInstance returned %t, want %t", tt.name, i, tt.isinst)
-		}
-		i = u.IsTemplate()
-		if i != tt.istmpl {
-			t.Errorf("NewNameInfo(%s).IsTemplate returned %t, want %t", tt.name, i, tt.istmpl)
-		}
-	}
-
-	bad := []string{"foo", "bar@baz"}
-	for _, tt := range bad {
-		if NewNameInfo(tt) != nil {
-			t.Errorf("NewNameInfo returned non-nil InstanceUnit unexpectedly")
 		}
 	}
 }
@@ -352,5 +223,23 @@ nonsense upon stilts
 		if _, err := New(tt); err == nil {
 			t.Fatalf("Did not get expected error creating Unit from %q", tt)
 		}
+	}
+}
+
+func TestInsert(t *testing.T) {
+	contents := `
+[Unit]
+Description = Foo
+
+[Service]
+ExecStart=echo "ping";
+ExecStop=echo "pong";
+`
+
+	unitFile, _ := New(contents)
+	unitFile = unitFile.Insert("bla", "bloep", "myvalue")
+
+	if x := unitFile.Contents["bla"]["bloep"]; x[0] != "myvalue" {
+		t.Fatalf("expected %s, got %s", "myvalue", x[0])
 	}
 }

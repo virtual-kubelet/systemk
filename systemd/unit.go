@@ -36,10 +36,10 @@ func unitToPod(units map[string]*unit.State) *corev1.Pod {
 		return nil
 	}
 
-	// See objectMetaToSection.
+	// MetaData as injected by CreatePod.
 	om := metav1.ObjectMeta{
 		Name:        Pod(name),
-		Namespace:   (uf.Contents[kubernetesSection]["namespace"])[0], // helper to not crash if not there?
+		Namespace:   (uf.Contents[kubernetesSection]["namespace"])[0],
 		ClusterName: (uf.Contents[kubernetesSection]["clusterName"])[0],
 		UID:         types.UID((uf.Contents[kubernetesSection]["uid"])[0]),
 	}
