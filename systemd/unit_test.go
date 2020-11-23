@@ -2,6 +2,8 @@ package systemd
 
 import (
 	"io/ioutil"
+	"log"
+	"os"
 	"testing"
 
 	"github.com/miekg/vks/pkg/system"
@@ -16,6 +18,13 @@ func TestNewUnit(t *testing.T) {
 	default:
 		return
 	}
+
+	dir, err := ioutil.TempDir(".", "units")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(dir) // clean up
+	unitDir = dir
 	p, err := New(provider.InitConfig{})
 	if err != nil {
 		t.Fatal(err)

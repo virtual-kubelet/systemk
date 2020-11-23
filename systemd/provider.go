@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/miekg/vks/pkg/manager"
 	"github.com/miekg/vks/pkg/packages"
@@ -9,6 +10,9 @@ import (
 	vkmanager "github.com/virtual-kubelet/node-cli/manager"
 	"github.com/virtual-kubelet/node-cli/provider"
 )
+
+// unitDir is where vks stores the modified unit files.
+var unitDir = "/var/run/vks"
 
 // P is a systemd provider.
 type P struct {
@@ -22,7 +26,11 @@ type P struct {
 
 // New returns a new systemd provider.
 func New(cfg provider.InitConfig) (*P, error) {
-	m, err := manager.New("/tmp/bla", false)
+	err := os.Mkdir(unitDir, os.ModeDir)
+	if err != nil && !os.IsExist(err) {
+		return nil, err
+	}
+	m, err := manager.New(unitDir, false)
 	if err != nil {
 		return nil, err
 	}
