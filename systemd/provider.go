@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/miekg/vks/pkg/manager"
 	"github.com/miekg/vks/pkg/packages"
@@ -25,7 +26,7 @@ type P struct {
 
 // New returns a new systemd provider.
 func New(cfg provider.InitConfig) (*P, error) {
-	if err := MkdirAll(unitDir, 0750); err != nil {
+	if err := os.MkdirAll(unitDir, 0750); err != nil {
 		return nil, err
 	}
 	m, err := manager.New(unitDir, false)

@@ -30,7 +30,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 
 		case v.EmptyDir != nil:
 			dir := filepath.Join(emptyDir, uid)
-			if err := MkdirAll(dir, 0750); err != nil {
+			if err := os.MkdirAll(dir, 0750); err != nil {
 				log.Println(err)
 				return nil, err
 			}
@@ -47,7 +47,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			}
 
 			dir := filepath.Join(secretDir, uid)
-			if err := MkdirAll(dir, 0750); err != nil {
+			if err := os.MkdirAll(dir, 0750); err != nil {
 				return nil, err
 			}
 
@@ -75,7 +75,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			}
 
 			dir := filepath.Join(configmapDir, uid)
-			if err := MkdirAll(dir, 0750); err != nil {
+			if err := os.MkdirAll(dir, 0750); err != nil {
 				return nil, err
 			}
 			log.Printf("Created %q for configmap: %s", dir, v.Name)
@@ -104,17 +104,4 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 	}
 
 	return vol, nil
-}
-
-// MkdirAll create all path elements in p as directories.
-func MkdirAll(p string, mode os.FileMode) error {
-	ele := filepath.SplitList(p)
-	for _, e := range ele {
-		// umask here...
-		err := os.Mkdir(e, 0750)
-		if err != nil && !os.IsExist(err) {
-			return err
-		}
-	}
-	return nil
 }

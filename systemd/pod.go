@@ -87,10 +87,12 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		// TODO(miek): parse c.Image for tag to get version
 		err, installed := p.pkg.Install(c.Image, "")
 		if err != nil {
+			log.Printf("Failed to install: %s", err)
 			return err
 		}
 		u, err := p.pkg.Unitfile(c.Image)
 		if err != nil {
+			log.Printf("Failed to find unit file: %s", err)
 			return err
 		}
 		// disable unit when we installed the package

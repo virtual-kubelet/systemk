@@ -17,7 +17,6 @@ type DebianPackageManager struct{}
 
 const (
 	aptGetCommand                    = "/usr/bin/apt-get"
-	aptCacheCommand                  = "/usr/bin/apt-cache"
 	dpkgCommand                      = "/usr/bin/dpkg"
 	debianSystemdUnitfilesPathPrefix = "/lib/systemd/system/"
 )
@@ -25,22 +24,12 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
-	checkCmdArgs := []string{
-		"show",
-		pkg,
-	}
-	checkCmd := exec.Command(aptCacheCommand, checkCmdArgs...)
-
+	checkCmd := exec.Command(dpkgCommand, "-s", pkg)
 	err := checkCmd.Run()
 	if err == nil {
 		// package exists
 		// TODO: check installed version
 		return nil, false
-	}
-	if exitError, ok := err.(*exec.ExitError); ok {
-		if exitError.ExitCode() != 100 { // 100 is No packages found
-			return fmt.Errorf("failed to check existence of package %s: %w", pkg, err), false
-		}
 	}
 
 	policyfile, err := policy()
