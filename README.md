@@ -44,12 +44,12 @@ certs (that are also rotated) is an open question.
 
 ## Current Status
 
-All testing has be done with k3s/uptimed.yaml which only runs 1 containers. But creating, inspecting
+All testing has be done with k3s/uptimed.yaml which only runs 1 container. But creating, inspecting
 and deleting pods works.
 
 Getting logs also works, but the UI for it could be better - needs some extra setup.
 
-Storage/configmaps isn't done at all currently, but there is a plan.
+EmptyDir/ConfigMaps and Secrets are implemented. EmptyDir is semi-tested with k3s/uptimed.yaml.
 
 ## Building
 
@@ -67,22 +67,9 @@ We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section.
 know a pod state vks will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
 
-Storage is handled by systemd. `PrivateMounts=true` is used to make things private and we inject the
+Storage is handled by vks and systemd. `PrivateMounts=true` is used to make things private and we inject the
 following into the unit to isolate it further and make generic path like `/var/run/secrets/...` work
-*per unit*.
-
-(`foo` is the pod UID)
-~~~
-PrivateMounts=true
-CacheDirectory=foo
-StateDirectory=foo
-RuntimeDirectory=foo
-PrivateTmp=true
-BindPaths=/var/run/foo:/var/run
-~~~
-
-This probably requires `JoinNamespaceOf` in other units that make up the pod as well. (not yet
-implemented or tested).
+*per unit*. This works by utilizing `BindPaths`.
 
 ### Limitations
 
@@ -91,7 +78,6 @@ process isolation. Starting two pods that use the same port is guaranteed to fai
 
 ## Questions
 
-* Pod storage, secret etc. Just something on disk? `/var/lib/<something>`?
 * CPU and memory usage? I *think* systemd might now, but unsure how to fetch it.
 * Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
   Debian. I need to add a repo for this... How?

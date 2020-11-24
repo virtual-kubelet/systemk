@@ -5,6 +5,7 @@ package systemd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -65,7 +66,24 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Print("CreatedPod called")
+
+	vol, err := p.volumes(pod)
+	if err != nil {
+		log.Printf("Failed to setup volumes: %s", err)
+		return err
+	}
 	for _, c := range pod.Spec.Containers {
+		bindmounts := []string{} // per pod. Join them all up with JoinNamespaceOf?? How do we shared mounts accross pods
+		for _, v := range c.VolumeMounts {
+			// readonly needs to be handled here. We need slighty more than a map and something to turn it into systemd directives.
+			dir, ok := vol[v.Name]
+			if !ok {
+				log.Printf("failed to find volumeMount %s in the specific volumes, skpping", v.Name)
+				continue
+			}
+			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
+		}
+
 		// TODO(miek): parse c.Image for tag to get version
 		if err := p.pkg.Install(c.Image, ""); err != nil {
 			return err
@@ -76,7 +94,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 		log.Printf("Unit file found at %q", u)
 		name := PodToUnitName(pod, c.Name)
-		log.Printf("Starting unit %s, %s as %s", c.Name, c.Image, name)
 		buf, err := ioutil.ReadFile(u)
 		if err != nil {
 			return err
@@ -89,7 +106,11 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "uid", string(pod.ObjectMeta.UID))
+		uf = uf.Insert("Service", "PrivateMounts", "true")
+		uf = uf.Insert("Service", "PrivateTmp", "true")
+		uf = uf.Insert("Service", "BindPaths", strings.Join(bindmounts, " "))
 
+		log.Printf("Starting unit %s, %s as %s\n%s", c.Name, c.Image, name, uf)
 		if err := p.m.Load(name, *uf); err != nil {
 			log.Printf("Failed to load unit: %s", err)
 			return err

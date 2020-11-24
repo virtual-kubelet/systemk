@@ -10,3 +10,9 @@ spec:
     image: uptimed
     ports:
     - containerPort: 2222
+    volumeMounts:
+    - mountPath: /cdrom
+      name: demo-volume
+  volumes:
+    - name: demo-volume
+      emptyDir: {}
