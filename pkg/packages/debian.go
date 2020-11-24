@@ -24,7 +24,7 @@ const (
 
 // Install install the given package at the given version
 // Does nothing if package is already installed
-func (p *DebianPackageManager) Install(pkg, version string) error {
+func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 	checkCmdArgs := []string{
 		"show",
 		pkg,
@@ -35,17 +35,17 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 	if err == nil {
 		// package exists
 		// TODO: check installed version
-		return nil
+		return nil, false
 	}
 	if exitError, ok := err.(*exec.ExitError); ok {
 		if exitError.ExitCode() != 100 { // 100 is No packages found
-			return fmt.Errorf("failed to check existence of package %s: %w", pkg, err)
+			return fmt.Errorf("failed to check existence of package %s: %w", pkg, err), false
 		}
 	}
 
 	policyfile, err := policy()
 	if err != nil {
-		return err
+		return err, false
 	}
 	defer os.Remove(policyfile)
 
@@ -59,10 +59,9 @@ func (p *DebianPackageManager) Install(pkg, version string) error {
 
 	out, err := installCmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install: %s\n%s", err, out)
+		return fmt.Errorf("failed to install: %s\n%s", err, out), false
 	}
-	// disable the unit when we installed it.
-	return nil
+	return nil, true
 }
 
 // policy writes a small script to disk, that only does exit 0

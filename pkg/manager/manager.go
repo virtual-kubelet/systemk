@@ -212,7 +212,7 @@ func (m *UnitManager) removeUnit(name string) (err error) {
 
 	// both DisableUnitFiles() and ResetFailedUnit() must be followed by
 	// removing the unit file. Otherwise "systemctl stop fleet" could end up hanging forever.
-	if _, errf := m.systemd.DisableUnitFiles([]string{name}, true); errf != nil {
+	if errf := m.DisableUnitFile(name); errf != nil {
 		err = fmt.Errorf("%v, %v", err, errf)
 	}
 
@@ -223,6 +223,12 @@ func (m *UnitManager) removeUnit(name string) (err error) {
 	ufPath := m.getUnitFilePath(name)
 	os.Remove(ufPath)
 
+	return err
+}
+
+// DisableUnitFile disable the unit named via name.
+func (m *UnitManager) DisableUnitFile(name string) error {
+	_, err := m.systemd.DisableUnitFiles([]string{name}, true)
 	return err
 }
 

@@ -85,13 +85,21 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 
 		// TODO(miek): parse c.Image for tag to get version
-		if err := p.pkg.Install(c.Image, ""); err != nil {
+		err, installed := p.pkg.Install(c.Image, "")
+		if err != nil {
 			return err
 		}
 		u, err := p.pkg.Unitfile(c.Image)
 		if err != nil {
 			return err
 		}
+		// disable unit when we installed the package
+		if installed {
+			// Do we care about the error here?
+			log.Printf("Disabling system unit %q, for package: %s", u, c.Image)
+			p.m.DisableUnitFile(u)
+		}
+
 		log.Printf("Unit file found at %q", u)
 		name := PodToUnitName(pod, c.Name)
 		buf, err := ioutil.ReadFile(u)
