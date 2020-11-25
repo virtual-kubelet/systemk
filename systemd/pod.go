@@ -20,7 +20,7 @@ import (
 // GetPod returns ...
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	log.Print("GetPod called")
-	units, err := p.m.GetStates(Prefix)
+	units, err := p.m.States(Prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
-	states, err := p.m.GetStates(Prefix)
+	states, err := p.m.States(Prefix)
 	if err != nil {
 		return nil, err
 	}

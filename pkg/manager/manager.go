@@ -109,9 +109,9 @@ func (m *UnitManager) TriggerStop(name string) error {
 	return nil
 }
 
-// GetState generates a State object representing the
+// State generates a State object representing the
 // current state of a Unit
-func (m *UnitManager) GetState(name string) (*unit.State, error) {
+func (m *UnitManager) State(name string) (*unit.State, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	us, err := m.getState(name)
@@ -134,6 +134,16 @@ func (m *UnitManager) getState(name string) (*unit.State, error) {
 	return &us, nil
 }
 
+// Properties returns the properties of the unit.
+func (m *UnitManager) Properties(name string) (map[string]interface{}, error) {
+	return m.systemd.GetUnitProperties(name)
+}
+
+// Property returns the property of the unit.
+func (m *UnitManager) Property(name, property string) (*dbus.Property, error) {
+	return m.systemd.GetUnitProperty(name, property)
+}
+
 func (m *UnitManager) readUnit(name string) (string, error) {
 	path := m.getUnitFilePath(name)
 	contents, err := ioutil.ReadFile(path)
@@ -150,8 +160,8 @@ func (m *UnitManager) ReloadUnitFiles() error { return m.systemd.Reload() }
 // this manager's units directory.
 func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) }
 
-// GetStates return all units the have the prefix "vks."
-func (m *UnitManager) GetStates(prefix string) (map[string]*unit.State, error) {
+// States return all units the have the prefix "vks."
+func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 	dbusStatuses, err := m.systemd.ListUnits()
 	if err != nil {
 		return nil, err
