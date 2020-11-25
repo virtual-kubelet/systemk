@@ -72,6 +72,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		log.Printf("Failed to setup volumes: %s", err)
 		return err
 	}
+	if len(pod.Spec.Containers) > 1 {
+		return fmt.Errorf("more than 1 (%d) containers isn't tested/supported yet", len(pod.Spec.Containers))
+	}
 	for _, c := range pod.Spec.Containers {
 		tmp := []string{"/var", "/run"}
 		bindmounts := []string{} // per pod
