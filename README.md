@@ -70,9 +70,9 @@ We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section.
 know a pod state vks will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
 
-Storage is handled by vks and systemd. `PrivateMounts=true` is used to make things private and we inject the
-following into the unit to isolate it further and make generic path like `/var/run/secrets/...` work
-*per unit*. This works by utilizing `BindPaths`.
+Storage is handled by systemd. Every mountpoint will get its own *tmpfs*, via bind mounts
+(`BindPaths`) we mount secrets and config maps into the tmpfs. Each pod gets two tmpfss by default,
+"/var" and "/run". All other paths are directly coming from the machine.
 
 ### Limitations
 

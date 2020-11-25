@@ -9,6 +9,7 @@ import (
 	"github.com/miekg/vks/pkg/system"
 	vkmanager "github.com/virtual-kubelet/node-cli/manager"
 	"github.com/virtual-kubelet/node-cli/provider"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // unitDir is where vks stores the modified unit files.
@@ -20,6 +21,7 @@ type P struct {
 	pkg packages.PackageManager
 	rm  *vkmanager.ResourceManager
 
+	Addresses     []corev1.NodeAddress
 	DaemonPort    int32
 	ClusterDomain string
 }

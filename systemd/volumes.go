@@ -14,9 +14,9 @@ import (
 
 // Where this files life is still an open question, right now we bind mount everything into place.
 var (
-	emptyDir     = filepath.Join(os.TempDir(), "emptydirs")
-	secretDir    = filepath.Join(os.TempDir(), "secrets")
-	configmapDir = filepath.Join(os.TempDir(), "configmaps")
+	varrun       = "/var/run"
+	secretDir    = "secrets"
+	configmapDir = "configmaps"
 )
 
 // volumes inspecs the volumes and returns a maaping with the volume's Name and the directory on-disk that
@@ -29,13 +29,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 		switch {
 
 		case v.EmptyDir != nil:
-			dir := filepath.Join(emptyDir, uid)
-			if err := os.MkdirAll(dir, 0750); err != nil {
-				log.Println(err)
-				return nil, err
-			}
-			log.Printf("Created %q for emptyDir: %s", dir, v.Name)
-			vol[v.Name] = dir
+			vol[v.Name] = "" // doesn't need a bind mount
 
 		case v.Secret != nil:
 			secret, err := p.rm.GetSecret(v.Secret.SecretName, pod.Namespace)
@@ -46,7 +40,8 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(secretDir, uid)
+			dir := filepath.Join(varrun, uid)
+			dir = filepath.Join(dir, secretDir)
 			if err := os.MkdirAll(dir, 0750); err != nil {
 				return nil, err
 			}
@@ -74,7 +69,8 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(configmapDir, uid)
+			dir := filepath.Join(varrun, uid)
+			dir = filepath.Join(dir, configmapDir)
 			if err := os.MkdirAll(dir, 0750); err != nil {
 				return nil, err
 			}

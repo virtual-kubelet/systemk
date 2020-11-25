@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func unitToPod(units map[string]*unit.State) *corev1.Pod {
+func (p *P) unitToPod(units map[string]*unit.State) *corev1.Pod {
 	if len(units) == 0 {
 		return nil
 	}
@@ -47,7 +47,7 @@ func unitToPod(units map[string]*unit.State) *corev1.Pod {
 	containers := toContainers(units)
 	containerStatuses := toContainerStatuses(units)
 
-	p := &corev1.Pod{
+	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
@@ -65,13 +65,13 @@ func unitToPod(units map[string]*unit.State) *corev1.Pod {
 			Conditions: activeStateToPodConditions(units[name].ActiveState, metav1.NewTime(time.Now())),
 			Message:    "",
 			Reason:     "",
-			HostIP:     "",
-			PodIP:      "127.0.0.1",
+			HostIP:     (externalOrInternalAddress(p.Addresses)).Address,
+			PodIP:      (externalOrInternalAddress(p.Addresses)).Address,
 			//			StartTime:         &containerStartTime,
 			ContainerStatuses: containerStatuses,
 		},
 	}
-	return p
+	return pod
 }
 
 func toContainers(units map[string]*unit.State) []corev1.Container {

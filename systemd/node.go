@@ -12,7 +12,6 @@ import (
 
 // ConfigureNode enables a provider to configure the node object that will be used for Kubernetes.
 func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
-	// POD CIDR?? - there is no pid cidr so it all maps to the host IP?
 	node.Status.Capacity = p.capacity()
 	node.Status.Allocatable = p.capacity()
 	node.Status.Conditions = p.nodeConditions()
@@ -32,6 +31,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 			corev1.LabelZoneRegionStable:        system.Hostname(),
 		},
 	}
+	p.Addresses = node.Status.Addresses
 }
 
 // nodeAddresses returns a list of addresses for the node status within Kubernetes.
@@ -76,7 +76,7 @@ func (p *P) capacity() corev1.ResourceList {
 		"cpu":     resource.MustParse(system.CPU()),
 		"memory":  resource.MustParse(system.Memory()),
 		"pods":    resource.MustParse(system.Pid()),
-		"storage": resource.MustParse("40G"), // need to specify some write space somewhere
+		"storage": resource.MustParse("40G"), // We're using tmpfs _a_ lot.. so
 	}
 }
 
@@ -131,4 +131,20 @@ func (p *P) nodeConditions() []corev1.NodeCondition {
 			Message:            "kubelet has sufficient PIDs available",
 		},
 	}
+}
+
+// externalOrInternalAddress prefers to return the external address of the node, if not available
+// an internal address will be returned. If neither is found a 127.0.0.1 node address is synthesized.
+func externalOrInternalAddress(addrs []corev1.NodeAddress) corev1.NodeAddress {
+	for _, a := range addrs {
+		if a.Type == corev1.NodeExternalIP {
+			return a
+		}
+	}
+	for _, a := range addrs {
+		if a.Type == corev1.NodeInternalIP {
+			return a
+		}
+	}
+	return corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "127.0.0.1"}
 }
