@@ -24,6 +24,7 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
+	// this doesn't find packages that are NOT completed purged
 	checkCmd := exec.Command(dpkgCommand, "-s", pkg)
 	err := checkCmd.Run()
 	if err == nil {

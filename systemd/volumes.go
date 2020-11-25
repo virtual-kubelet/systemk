@@ -48,12 +48,23 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 
 			log.Printf("Created %q for secret: %s", dir, v.Name)
 
-			// secret.StringData is not handled here.
+			for k, v := range secret.StringData {
+				path := filepath.Join(dir, k)
+
+				log.Printf("Writing secret to path %q", path)
+				data, err := base64.StdEncoding.DecodeString(string(v))
+				if err != nil {
+					return vol, err
+				}
+				if err := ioutil.WriteFile(path, data, 0640); err != nil {
+					return vol, err
+				}
+			}
 			for k, v := range secret.Data {
 				path := filepath.Join(dir, k)
 
 				log.Printf("Writing secret to path %q", path)
-				err := ioutil.WriteFile(path, []byte(base64.StdEncoding.EncodeToString(v)), 0640)
+				err := ioutil.WriteFile(path, []byte(v), 0640)
 				if err != nil {
 					return vol, err
 				}
@@ -79,15 +90,14 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			for k, v := range configMap.Data {
 				path := filepath.Join(dir, k)
 				log.Printf("Writing configMap Data to path %q", path)
-				err := ioutil.WriteFile(path, []byte(base64.StdEncoding.EncodeToString([]byte(v))), 0640)
-				if err != nil {
+				if err := ioutil.WriteFile(path, []byte(v), 0640); err != nil {
 					return vol, err
 				}
 			}
 			for k, v := range configMap.BinaryData {
 				path := filepath.Join(dir, k)
 				log.Printf("Writing configMap BinaryData to path %q", path)
-				err := ioutil.WriteFile(path, []byte(base64.StdEncoding.EncodeToString(v)), 0640)
+				err := ioutil.WriteFile(path, v, 0640)
 				if err != nil {
 					return vol, err
 				}

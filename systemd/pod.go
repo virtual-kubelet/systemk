@@ -122,6 +122,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to unit.New: %s", err)
 			return err
 		}
+
+		// do permissions properly, TODO(miek): fix soon!! We need to chmod our mountpoints (sadly)
+		uf = uf.Overwrite("Service", "User", "root")
+
 		// If command and/or args are given we need to override the ExecStart
 		// Bit execStart should be a string slice, but isn't returned like this, so this involves some string wrangling
 		// to get things right.
