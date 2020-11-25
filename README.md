@@ -64,7 +64,10 @@ vks is installing the package the official system unit will be disabled; if the 
 exists we leave the existing unit alone.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
-unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`.
+unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
+will replace the first word of `ExecStart` and leave any options there. If `args` are also given
+the entire `ExecStart` is replaced with those. If only `args` are given the command will remain and
+only the options/args will be replaced.
 
 We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
 know a pod state vks will query systemd and read the unit file back. This way we know the status and

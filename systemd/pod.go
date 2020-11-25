@@ -119,7 +119,25 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to unit.New: %s", err)
 			return err
 		}
-		uid := string(pod.ObjectMeta.UID) // not different between containers, good or bad? They share /var but not /tmp (due to privatetmp?)
+		// If command and/or args are given we need to override the ExecStart
+		// Bit execStart should be a string slice, but isn't returned like this, so this involves some string wrangling
+		// to get things right.
+		execStart := uf.Contents["Service"]["ExecStart"] // check if exists...?
+		execStarts := []string(execStart)
+		if len(execStart) == 1 {
+			execStarts = strings.Fields(execStart[0])
+		}
+
+		if c.Command != nil {
+			execStarts[0] = strings.Join(c.Command, " ") // some args might be included here
+		}
+		if c.Args != nil {
+			execStarts = execStarts[:1]
+			execStarts = append(execStarts, c.Args...)
+		}
+		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStarts, " "))
+
+		uid := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
 		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "uid", uid)

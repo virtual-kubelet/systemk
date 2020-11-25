@@ -94,6 +94,21 @@ func (u *File) Insert(section, name string, value ...string) *File {
 	return newFromOptions(u.Options)
 }
 
+// Overwrite overwrites name=value in the section and returns a newly parsed pointer to File.
+func (u *File) Overwrite(section, name string, value ...string) *File {
+	opts := make([]*unit.UnitOption, len(u.Options))
+	j := 0
+	for _, o := range u.Options {
+		if o.Section == section && o.Name == name {
+			continue
+		}
+		opts[j] = o
+		j++
+	}
+	u.Options = opts[:j]
+	return u.Insert(section, name, value...)
+}
+
 // DefaultUnitType appends the default unit type to a given unit name, ignoring
 // any file extensions that already exist.
 func DefaultUnitType(name string) string {
