@@ -19,6 +19,10 @@ const (
 	archlinuxSystemdUnitfilesPathPrefix = "/usr/lib/systemd/system/"
 )
 
+func (p *ArchlinuxPackageManager) Setup() error {
+	return nil
+}
+
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *ArchlinuxPackageManager) Install(pkg, version string) (error, bool) {

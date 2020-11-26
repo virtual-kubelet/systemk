@@ -43,7 +43,7 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 	if version != "" {
 		pkgToInstall = fmt.Sprintf("%s=%s*", pkg, version)
 	}
-	installCmdArgs := []string{"-qq", "--force-yes", "install", pkgToInstall}
+	installCmdArgs := []string{"-qq", "--assume-yes", "--no-install-recommends", "install", pkgToInstall}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 	installCmd.Env = append(installCmd.Env, fmt.Sprintf("POLICYRCD=%s", policyfile))
 
