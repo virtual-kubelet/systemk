@@ -1,10 +1,9 @@
 package systemd
 
 import (
-	"fmt"
+	"io/ioutil"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/miekg/vks/pkg/system"
@@ -163,16 +162,36 @@ func unitNames(units map[string]*unit.State) []string {
 	return sort.StringSlice(keys)
 }
 
-// objectMetaToSection converts the objectMeta into a buffer containing a [X-Kubernetes] section.
-// this allows us to store any Kubernetes metadata in the unit.
-func objectMetaToSection(om metav1.ObjectMeta) []byte {
-	b := new(strings.Builder)
-	fmt.Fprintf(b, "\n\n[%s]\n", kubernetesSection)
-	fmt.Fprintf(b, "namespace=%s\n", om.Namespace)
-	fmt.Fprintf(b, "clusterName=%s\n", om.ClusterName)
-	fmt.Fprintf(b, "uid=%s\n", string(om.UID))
-	// creation timestamp and other values? TODO
-	return []byte(b.String())
+const synthUnit = `[Unit]
+Description=vks
+Documentation=man:vks(8)
+
+[Service]
+Type=oneshot
+ExecStart=need to be overwritten
+
+[Install]
+WantedBy=multi-user.target
+`
+
+func (p *P) unitfileFromPackageOrSynthesized(c corev1.Container, installed bool) (*unit.File, error) {
+	u, err := p.pkg.Unitfile(c.Image)
+	if err != nil {
+		log.Printf("Failed to find unit file: %s. Synthesizing one", err)
+		uf, err := unit.New(synthUnit)
+		return uf, err
+	}
+
+	log.Printf("Unit file found at %q", u)
+	buf, err := ioutil.ReadFile(u)
+	if err != nil {
+		return nil, err
+	}
+	uf, err := unit.New(string(buf))
+	if err != nil {
+		return nil, err
+	}
+	return uf, nil
 }
 
 const kubernetesSection = "X-Kubernetes"

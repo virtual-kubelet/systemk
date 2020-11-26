@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/miekg/vks/pkg/unit"
@@ -93,33 +94,16 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 		}
 
-		// TODO(miek): parse c.Image for tag to get version
+		// TODO(): parse c.Image for tag to get version
 		err, installed := p.pkg.Install(c.Image, "")
 		if err != nil {
 			log.Printf("Failed to install: %s", err)
 			return err
 		}
-		u, err := p.pkg.Unitfile(c.Image)
-		if err != nil {
-			log.Printf("Failed to find unit file: %s", err)
-			return err
-		}
-		// disable unit when we installed the package
-		if installed {
-			// Do we care about the error here?
-			log.Printf("Disabling system unit %q, for package: %s", u, c.Image)
-			p.m.DisableUnitFile(u)
-		}
 
-		log.Printf("Unit file found at %q", u)
-		name := PodToUnitName(pod, c.Name)
-		buf, err := ioutil.ReadFile(u)
+		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {
-			return err
-		}
-		uf, err := unit.New(string(buf))
-		if err != nil {
-			log.Printf("Failed to unit.New: %s", err)
+			log.Printf("Failed to create/use unit file: %s", err)
 			return err
 		}
 
@@ -136,6 +120,13 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 
 		if c.Command != nil {
+			if cmd := c.Command[0]; !path.IsAbs(cmd) {
+				fullpath, err := exec.LookPath(cmd)
+				if err == nil {
+					c.Command[0] = fullpath
+				}
+				// if this errored the unit will fail, so fail there instead of erroring here.
+			}
 			execStarts[0] = strings.Join(c.Command, " ") // some args might be included here
 		}
 		if c.Args != nil {
@@ -143,6 +134,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			execStarts = append(execStarts, c.Args...)
 		}
 		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStarts, " "))
+
+		name := PodToUnitName(pod, c.Name)
 
 		uid := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
 		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
@@ -152,6 +145,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
 		mount := strings.Join(bindmounts, " ")
 		uf = uf.Insert("Service", "BindPaths", mount)
+
+		for _, env := range p.defaultEnvironment() {
+			uf = uf.Insert("Service", "Environment", env)
+		}
 
 		log.Printf("Starting unit %s, %s as %s\n%s", c.Name, c.Image, name, uf)
 		if err := p.m.Load(name, *uf); err != nil {

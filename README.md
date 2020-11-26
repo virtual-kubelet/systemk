@@ -61,7 +61,9 @@ kubelet.
 Pods can contain multiple containers; each container is a new unit and tracked by systemd. The named
 image is assumed to be a *package* and will be installed via the normal means (`apt-get`, etc.). If
 vks is installing the package the official system unit will be disabled; if the package already
-exists we leave the existing unit alone.
+exists we leave the existing unit alone. If the install doesn't come with a unit file (say you
+install `zsh`) we will synthesize a small service unit file; for this to work the podSpec need to
+(at) least define a command to run.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
 unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
