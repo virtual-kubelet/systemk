@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptimed
+  labels:
+    app: uptimed
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: uptimed
+  template:
+    metadata:
+      labels:
+        app: uptimed
+    spec:
+      containers:
+      - name: uptimed
+        image: uptimed
+        ports:
+        - containerPort: 2222
+        volumeMounts:
+        - mountPath: /cdrom
+          name: demo-volume
+      - name: while
+        image: bash
+        command: ["/usr/bin/bash", "-c"]
+        args: ["while true; do ls /var/run/secrets/kubernetes.io; sleep 1; done"]
+      volumes:
+      - name: demo-volume
+        emptyDir: {}
