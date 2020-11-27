@@ -116,8 +116,10 @@ func DefaultUnitType(name string) string {
 	return fmt.Sprintf("%s%s", name, ServiceSuffix)
 }
 
-// ServiceSuffix is the suffix for service files. This includes the dot.
-const ServiceSuffix = ".service"
+const (
+	// ServiceSuffix is the suffix for service files. This includes the dot.
+	ServiceSuffix = ".service"
+)
 
 // State encodes the current state of a unit loaded into a vks agent
 type State struct {

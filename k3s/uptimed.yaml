@@ -13,6 +13,10 @@ spec:
     volumeMounts:
     - mountPath: /cdrom
       name: demo-volume
+  - name: while
+    image: bash
+    command: ["/usr/bin/bash", "-c"]
+    args: ["while true; do ls /var/run/secrets/kubernetes.io; sleep 1; done"]
   volumes:
-    - name: demo-volume
-      emptyDir: {}
+  - name: demo-volume
+    emptyDir: {}

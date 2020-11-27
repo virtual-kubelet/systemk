@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
-	"path"
 	"strings"
 
 	"github.com/miekg/vks/pkg/unit"
@@ -67,12 +66,12 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	vol, err := p.volumes(pod)
 	if err != nil {
 		log.Printf("Failed to setup volumes: %s", err)
+		// this needs a fake unit or somesuch, so we can use that mechanism to convey state.
 		return err
 	}
-	if len(pod.Spec.Containers) > 1 {
-		return fmt.Errorf("more than 1 (%d) containers isn't tested/supported yet", len(pod.Spec.Containers))
-	}
-	for _, c := range pod.Spec.Containers {
+
+	joinsNamespaceOf := ""
+	for i, c := range pod.Spec.Containers {
 		tmp := []string{"/var", "/run"}
 		bindmounts := []string{} // per pod
 		for _, v := range c.VolumeMounts {
@@ -90,7 +89,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 		}
 
-		// TODO(): parse c.Image for tag to get version
+		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
 		err, installed := p.pkg.Install(c.Image, "")
 		if err != nil {
 			log.Printf("Failed to install: %s", err)
@@ -103,35 +102,14 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 
-		// do permissions properly, TODO(miek): fix soon!! We need to chmod our mountpoints (sadly)
+		// do permissions properly, TODO(miek): fix soon!! We need to chmod our mountpoints??
 		uf = uf.Overwrite("Service", "User", "root")
+
 		// keep the unit around, the control plane where clear it with a DeletePod
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
-		// If command and/or args are given we need to override the ExecStart
-		// Bit execStart should be a string slice, but isn't returned like this, so this involves some string wrangling
-		// to get things right.
-		execStart := uf.Contents["Service"]["ExecStart"] // check if exists...?
-		execStarts := []string(execStart)
-		if len(execStart) == 1 {
-			execStarts = strings.Fields(execStart[0])
-		}
-
-		if c.Command != nil {
-			if cmd := c.Command[0]; !path.IsAbs(cmd) {
-				fullpath, err := exec.LookPath(cmd)
-				if err == nil {
-					c.Command[0] = fullpath
-				}
-				// if this errored the unit will fail, so fail there instead of erroring here.
-			}
-			execStarts[0] = strings.Join(c.Command, " ") // some args might be included here
-		}
-		if c.Args != nil {
-			execStarts = execStarts[:1]
-			execStarts = append(execStarts, c.Args...)
-		}
-		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStarts, " "))
+		execStart := commandAndArgs(uf, c)
+		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStart, " "))
 
 		name := PodToUnitName(pod, c.Name)
 
@@ -139,10 +117,16 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "uid", uid)
-		tmpfs := strings.Join(tmp, " ")
-		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
-		mount := strings.Join(bindmounts, " ")
-		uf = uf.Insert("Service", "BindPaths", mount)
+		if i == 0 { // First container of the lot
+			tmpfs := strings.Join(tmp, " ")
+			uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
+			mount := strings.Join(bindmounts, " ")
+			uf = uf.Insert("Service", "BindPaths", mount)
+
+			joinsNamespaceOf = name
+		} else {
+			uf = uf.Insert("Unit", "JoinsNamespaceOf", joinsNamespaceOf)
+		}
 
 		for _, env := range p.defaultEnvironment() {
 			uf = uf.Insert("Service", "Environment", env)
@@ -157,7 +141,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to trigger start: %s", err)
 			return err
 		}
-
 	}
 	return nil
 }

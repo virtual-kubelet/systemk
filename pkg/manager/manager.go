@@ -155,9 +155,6 @@ func (m *UnitManager) Property(name, property string) string {
 
 // Property returns the property of the unit.
 func (m *UnitManager) ServiceProperty(name, property string) string {
-	if strings.HasSuffix(name, ".service") {
-		name = name[:len(name)-len(".service")]
-	}
 	p, err := m.systemd.GetServiceProperty(name, property)
 	if err != nil {
 		return ""
@@ -165,7 +162,12 @@ func (m *UnitManager) ServiceProperty(name, property string) string {
 	if p == nil {
 		return ""
 	}
-	return p.Value.String()
+	// these value string encode the type with @<Char><Space>, if so remove it before returning
+	vs := p.Value.String()
+	if vs[0] == '@' {
+		return vs[3:]
+	}
+	return vs
 }
 
 func (m *UnitManager) readUnit(name string) (string, error) {

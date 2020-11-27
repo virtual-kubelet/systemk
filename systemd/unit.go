@@ -143,10 +143,8 @@ func (p *P) toContainerStatuses(stats map[string]*unit.State) []corev1.Container
 }
 
 func (p *P) containerState(u *unit.State) v1.ContainerState {
-	if u.ActiveState != "active" {
-		log.Printf("ActiveState is not %s, for %s", u.ActiveState, u.Name)
-	}
 	// systemctl --state=help
+	// Look at u.ActiveState at all?
 	switch {
 	case strings.HasPrefix(u.SubState, "stop"):
 		fallthrough
