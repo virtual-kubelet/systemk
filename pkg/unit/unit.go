@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/miekg/go-systemd/dbus"
 	"github.com/miekg/go-systemd/unit"
 )
 
@@ -120,10 +121,6 @@ const ServiceSuffix = ".service"
 
 // State encodes the current state of a unit loaded into a vks agent
 type State struct {
-	LoadState   string
-	ActiveState string
-	SubState    string
-	MachineID   string
-	UnitName    string
-	UnitData    string // the unit file as written to disk
+	dbus.UnitStatus
+	UnitData string // the unit file as written to disk
 }

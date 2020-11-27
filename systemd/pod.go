@@ -1,7 +1,5 @@
 package systemd
 
-// copied from virtual kubelet zun
-
 import (
 	"bytes"
 	"context"
@@ -18,20 +16,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// GetPod returns ...
+// If any of these methods return an error, it will show up in the kubectl output as "ProviderFailed", so we should
+// be very careful to just return one of something trivial failed. It's better to setup as much as you can then let
+// the container/unit start fail, which will be correctly picked up by the control plane.
+
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	log.Print("GetPod called")
-	units, err := p.m.States(Prefix)
+	stats, err := p.m.States(Prefix)
 	if err != nil {
-		return nil, err
+		log.Printf("Failed to get states: %s", err)
+		return nil, nil
 	}
-	unitpref := UnitPrefix(namespace, name)
-	for name := range units {
-		if !strings.HasPrefix(name, unitpref) {
-			delete(units, name)
-		}
-	}
-	pod := p.unitToPod(units)
+	pod := p.statsToPod(stats)
 	return pod, nil
 }
 
@@ -109,6 +105,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		// do permissions properly, TODO(miek): fix soon!! We need to chmod our mountpoints (sadly)
 		uf = uf.Overwrite("Service", "User", "root")
+		// keep the unit around, the control plane where clear it with a DeletePod
+		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
 		// If command and/or args are given we need to override the ExecStart
 		// Bit execStart should be a string slice, but isn't returned like this, so this involves some string wrangling

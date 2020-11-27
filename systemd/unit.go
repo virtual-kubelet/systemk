@@ -1,9 +1,13 @@
 package systemd
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"io/ioutil"
 	"log"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/miekg/vks/pkg/system"
@@ -14,18 +18,18 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (p *P) unitToPod(units map[string]*unit.State) *corev1.Pod {
-	if len(units) == 0 {
+func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
+	if len(stats) == 0 {
 		return nil
 	}
 	name := ""
 	// Pick a random unit, the things we care about should be identical btween them.
-	// This identify is however not checked.
-	for k := range units {
+	// We might need to pick the "correct" one at some point.
+	for k := range stats {
 		name = k
 		break
 	}
-	uf, err := unit.New(units[name].UnitData)
+	uf, err := unit.New(stats[name].UnitData)
 	if err != nil {
 		log.Printf("error while parsing unit file %s", err)
 	}
@@ -43,8 +47,9 @@ func (p *P) unitToPod(units map[string]*unit.State) *corev1.Pod {
 		UID:         types.UID((uf.Contents[kubernetesSection]["uid"])[0]),
 	}
 
-	containers := toContainers(units)
-	containerStatuses := toContainerStatuses(units)
+	containers := p.toContainers(stats)
+	containerStatuses := p.toContainerStatuses(stats)
+	starttime := metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(name, "ExecMainStartTimestampMonotonic")))
 
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -58,24 +63,40 @@ func (p *P) unitToPod(units map[string]*unit.State) *corev1.Pod {
 			Containers: containers,
 		},
 
-		// podstatus is the sum of all container statusses???
 		Status: corev1.PodStatus{
-			Phase:      activeStateToPhase(units[name].ActiveState),
-			Conditions: activeStateToPodConditions(units[name].ActiveState, metav1.NewTime(time.Now())),
-			Message:    "",
-			Reason:     "",
-			HostIP:     (externalOrInternalAddress(p.Addresses)).Address,
-			PodIP:      (externalOrInternalAddress(p.Addresses)).Address,
-			//			StartTime:         &containerStartTime,
+			Phase: toPhase(containerStatuses), // might need to have pending if pulling done packages... etc?
+			Conditions: []corev1.PodCondition{
+				{
+					Type:               corev1.PodReady,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: starttime,
+				},
+				{
+					Type:               corev1.PodInitialized,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: starttime,
+				},
+				{
+					Type:               corev1.PodScheduled,
+					Status:             corev1.ConditionTrue,
+					LastTransitionTime: starttime,
+				},
+			},
 			ContainerStatuses: containerStatuses,
+
+			Message:   string(toPhase(containerStatuses)),
+			Reason:    "",
+			HostIP:    (externalOrInternalAddress(p.Addresses)).Address,
+			PodIP:     (externalOrInternalAddress(p.Addresses)).Address,
+			StartTime: &starttime,
 		},
 	}
 	return pod
 }
 
-func toContainers(units map[string]*unit.State) []corev1.Container {
-	keys := unitNames(units)
-	containers := make([]v1.Container, 0, len(units))
+func (p *P) toContainers(stats map[string]*unit.State) []corev1.Container {
+	keys := unitNames(stats)
+	containers := make([]v1.Container, 0, len(stats))
 	for _, k := range keys {
 		container := v1.Container{
 			Name:      Image(k),
@@ -100,56 +121,106 @@ func toContainers(units map[string]*unit.State) []corev1.Container {
 	return containers
 }
 
-func toContainerStatuses(units map[string]*unit.State) []corev1.ContainerStatus {
-	keys := unitNames(units)
-	statuses := make([]v1.ContainerStatus, 0, len(units))
+func (p *P) toContainerStatuses(stats map[string]*unit.State) []corev1.ContainerStatus {
+	keys := unitNames(stats)
+	statuses := make([]v1.ContainerStatus, 0, len(stats))
 	for _, k := range keys {
-		u := units[k]
+		s := stats[k]
+		restarts, _ := strconv.Atoi(p.m.ServiceProperty(k, "NRestarts"))
 		status := v1.ContainerStatus{
 			Name:                 Name(k),
-			State:                containerState(u),
-			LastTerminationState: containerState(u),
-			Ready:                activeStateToPhase(u.ActiveState) == v1.PodRunning,
-			RestartCount:         int32(0),
+			State:                p.containerState(s),
+			LastTerminationState: p.containerState(s),
+			Ready:                true, // readiness probes on the container level??
+			RestartCount:         int32(restarts),
 			Image:                Image(k),
-			ImageID:              "",
-			ContainerID:          "uuid", // from name? (hash of the unit? we have it?
+			ImageID:              hash(Image(k)),
+			ContainerID:          "pid://" + p.m.ServiceProperty(k, "MainPID"),
 		}
 		statuses = append(statuses, status)
 	}
 	return statuses
 }
 
-func containerState(u *unit.State) v1.ContainerState {
-	// Handle the case where the container is running.
-	if u.ActiveState == "active" {
-		return v1.ContainerState{
-			Running: &v1.ContainerStateRunning{
-				StartedAt: metav1.NewTime(time.Time(time.Now())),
-			},
-		}
+func (p *P) containerState(u *unit.State) v1.ContainerState {
+	if u.ActiveState != "active" {
+		log.Printf("ActiveState is not %s, for %s", u.ActiveState, u.Name)
 	}
-
-	// Handle the case where the container failed.
-	if u.ActiveState == "failed" || u.ActiveState == "inactive" {
+	// systemctl --state=help
+	switch {
+	case strings.HasPrefix(u.SubState, "stop"):
+		fallthrough
+	case u.SubState == "failed" || u.SubState == "exited" || u.SubState == "dead":
+		exitcode := int32(propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainStatus")))
+		reason := string(corev1.PodFailed)
+		if exitcode == 0 {
+			reason = string(corev1.PodSucceeded)
+		}
 		return v1.ContainerState{
 			Terminated: &v1.ContainerStateTerminated{
-				ExitCode:   int32(0), // we have all this
-				Reason:     u.ActiveState,
-				Message:    "yes", // maybe this as well
-				StartedAt:  metav1.NewTime(time.Time(time.Now())),
-				FinishedAt: metav1.NewTime(time.Time(time.Now())),
+				ExitCode:    exitcode,
+				Reason:      reason,
+				Message:     reason,
+				StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
+				FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))),
+				ContainerID: "pid://" + p.m.ServiceProperty(u.Name, "MainPID"),
 			},
+		}
+
+	case strings.HasPrefix(u.SubState, "start"):
+		fallthrough
+	case u.SubState == "condition":
+		return v1.ContainerState{
+			Waiting: &v1.ContainerStateWaiting{
+				Reason:  u.SubState,
+				Message: u.SubState,
+			},
+		}
+	case u.SubState == "running" || u.SubState == "auto-restart" || u.SubState == "reload":
+		return v1.ContainerState{
+			Running: &v1.ContainerStateRunning{
+				StartedAt: metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
+			},
+		}
+
+	default:
+		log.Printf("Unhandled substate for %q: %s", u.Name, u.SubState)
+		return v1.ContainerState{}
+	}
+}
+
+func toPhase(status []v1.ContainerStatus) corev1.PodPhase {
+	// run through the states, if 1 is waiting return pending.
+	running := 0
+	terminated := 0
+	exitcode := int32(0)
+	for _, s := range status {
+		s1 := s.State
+		if s1.Waiting != nil {
+			return corev1.PodPending
+		}
+		if s1.Running != nil {
+			running++
+		}
+		if s1.Terminated != nil {
+			terminated++
+			exitcode += s1.Terminated.ExitCode
 		}
 	}
 
-	// Handle the case where the container is pending.
-	return v1.ContainerState{
-		Waiting: &v1.ContainerStateWaiting{
-			Reason:  u.ActiveState,
-			Message: "now what",
-		},
+	if running == len(status) { // all running
+		return corev1.PodRunning
 	}
+
+	if terminated == len(status) {
+		if exitcode == 0 {
+			return corev1.PodSucceeded
+
+		}
+		return corev1.PodFailed
+	}
+
+	return corev1.PodUnknown
 }
 
 func unitNames(units map[string]*unit.State) []string {
@@ -167,7 +238,6 @@ Description=vks
 Documentation=man:vks(8)
 
 [Service]
-Type=oneshot
 ExecStart=need to be overwritten
 
 [Install]
@@ -195,3 +265,19 @@ func (p *P) unitfileFromPackageOrSynthesized(c corev1.Container, installed bool)
 }
 
 const kubernetesSection = "X-Kubernetes"
+
+func hash(s string) string {
+	h := sha1.New()
+	h.Write([]byte(s))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func propertyNumberToInt(s string) int {
+	i, _ := strconv.Atoi(s)
+	return i
+}
+
+func propertyTimestampToTime(s string) time.Time {
+	i, _ := strconv.ParseInt(s, 10, 64)
+	return time.Unix(i, 0)
+}

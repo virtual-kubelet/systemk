@@ -126,22 +126,46 @@ func (m *UnitManager) getState(name string) (*unit.State, error) {
 	if err != nil {
 		return nil, err
 	}
-	us := unit.State{
+	us := &unit.State{UnitStatus: dbus.UnitStatus{
+		Description: info["Description"].(string),
 		LoadState:   info["LoadState"].(string),
 		ActiveState: info["ActiveState"].(string),
 		SubState:    info["SubState"].(string),
-	}
-	return &us, nil
+	}}
+	return us, nil
 }
 
 // Properties returns the properties of the unit.
+// Probably need the service properpty, not the unit.
 func (m *UnitManager) Properties(name string) (map[string]interface{}, error) {
 	return m.systemd.GetUnitProperties(name)
 }
 
 // Property returns the property of the unit.
-func (m *UnitManager) Property(name, property string) (*dbus.Property, error) {
-	return m.systemd.GetUnitProperty(name, property)
+func (m *UnitManager) Property(name, property string) string {
+	p, err := m.systemd.GetUnitProperty(name, property)
+	if err != nil {
+		return ""
+	}
+	if p == nil {
+		return ""
+	}
+	return p.Value.String()
+}
+
+// Property returns the property of the unit.
+func (m *UnitManager) ServiceProperty(name, property string) string {
+	if strings.HasSuffix(name, ".service") {
+		name = name[:len(name)-len(".service")]
+	}
+	p, err := m.systemd.GetServiceProperty(name, property)
+	if err != nil {
+		return ""
+	}
+	if p == nil {
+		return ""
+	}
+	return p.Value.String()
 }
 
 func (m *UnitManager) readUnit(name string) (string, error) {
@@ -176,12 +200,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 		if !strings.HasSuffix(dus.Name, ".service") {
 			continue
 		}
-		log.Printf("Added state for unit %q", dus.Name)
-		us := &unit.State{
-			LoadState:   dus.LoadState,
-			ActiveState: dus.ActiveState,
-			SubState:    dus.SubState,
-		}
+		us := &unit.State{UnitStatus: dus}
 		if buf, err := m.readUnit(dus.Name); err == nil {
 			// this should not error, but ... TODO(miek)
 			us.UnitData = buf
