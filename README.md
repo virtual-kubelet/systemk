@@ -44,12 +44,14 @@ certs (that are also rotated) is an open question.
 
 ## Current Status
 
-All testing has be done with k3s/uptimed.yaml which only runs 1 container. But creating, inspecting
-and deleting pods works.
+Multiple containers in a pod can be run and they can see each others storage. Creating, deleing,
+inspecting Pods all work. None of the higher level abstractions (replicaset, deployment) have been
+tried though.
+
+EmptyDir/ConfigMaps and Secrets are implemented, these are all backed my tmpfs, and `bind`-mounted
+into the "container".
 
 Getting logs also works, but the UI for it could be better - needs some extra setup.
-
-EmptyDir/ConfigMaps and Secrets are implemented. EmptyDir is semi-tested with k3s/uptimed.yaml.
 
 ## Building
 
@@ -86,7 +88,6 @@ process isolation. Starting two pods that use the same port is guaranteed to fai
 
 ## Questions
 
-* CPU and memory usage? I *think* systemd might now, but unsure how to fetch it.
 * Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
   Debian. I need to add a repo for this... How?
 
@@ -151,9 +152,3 @@ uptimed   1/1     Running   0          7m42s
 ~~~
 
 You can then delete the pod.
-
-## Naming
-
-* Currently it's 'vks' - virtual kubelet systemd
-* systemk popped up on twitter, which I quite like
-* others?
