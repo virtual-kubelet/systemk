@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/miekg/vks/pkg/unit"
@@ -77,4 +79,21 @@ func (p *ArchlinuxPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	return basicPath, nil
+}
+
+// Clean implements the Packager interface. On error the origin string is returned.
+func (p *ArchlinuxPackageManager) Clean(pkg string) string {
+	if !strings.HasPrefix(pkg, "arch://") {
+		return pkg
+	}
+	u, err := url.Parse(pkg)
+	if err != nil {
+		return pkg
+	}
+	deb := path.Base(u.Path)
+	i := strings.Index(deb, "_")
+	if i < 2 {
+		return pkg
+	}
+	return deb[:i]
 }

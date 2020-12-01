@@ -90,11 +90,14 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 
 		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
+		// if we're downloading the image, the image name needs cleaning
 		err, installed := p.pkg.Install(c.Image, "")
 		if err != nil {
 			log.Printf("Failed to install package %q: %s", c.Image, err)
 			return err
 		}
+
+		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
 
 		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {

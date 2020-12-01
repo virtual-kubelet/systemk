@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: coredns
+spec:
+  containers:
+  - name: coredns
+    image: deb://www.miek.nl/coredns_1.7.1_amd64.deb
+    ports:
+    - containerPort: 53

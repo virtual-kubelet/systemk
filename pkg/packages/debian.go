@@ -5,8 +5,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/miekg/vks/pkg/unit"
@@ -39,17 +42,29 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 	}
 	defer os.Remove(policyfile)
 
-	pkgToInstall := pkg
-	if version != "" {
-		pkgToInstall = fmt.Sprintf("%s=%s*", pkg, version)
+	installCmd := new(exec.Cmd)
+	switch {
+	case strings.HasPrefix(pkg, "deb://"):
+		pkgToInstall, err := fetch(pkg[6:], "")
+		if err != nil {
+			return err, false
+		}
+		installCmdArgs := []string{"-i", pkgToInstall}
+		installCmd = exec.Command(dpkgCommand, installCmdArgs...)
+	default:
+		pkgToInstall := pkg
+		if version != "" {
+			pkgToInstall = fmt.Sprintf("%s=%s*", pkg, version)
+		}
+		installCmdArgs := []string{"-qq", "--assume-yes", "--no-install-recommends", "install", pkgToInstall}
+		installCmd = exec.Command(aptGetCommand, installCmdArgs...)
 	}
-	installCmdArgs := []string{"-qq", "--assume-yes", "--no-install-recommends", "install", pkgToInstall}
-	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 	installCmd.Env = []string{fmt.Sprintf("POLICYRCD=%s", policyfile)} // this effectively clears the env for this command, add stuff back in
 	for _, env := range []string{"PATH", "HOME", "LOGNAME"} {
-		installCmd.Env = append(installCmd.Env, os.Getenv(env))
+		installCmd.Env = append(installCmd.Env, env+"="+os.Getenv(env))
 	}
 
+	log.Printf("Running %s", installCmd)
 	out, err := installCmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install: %s\n%s", err, out), false
@@ -99,4 +114,21 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	return basicPath, nil
+}
+
+// Clean implements the Packager interface. On error the origin string is returned.
+func (p *DebianPackageManager) Clean(pkg string) string {
+	if !strings.HasPrefix(pkg, "deb://") {
+		return pkg
+	}
+	u, err := url.Parse(pkg)
+	if err != nil {
+		return pkg
+	}
+	deb := path.Base(u.Path)
+	i := strings.Index(deb, "_")
+	if i < 2 {
+		return pkg
+	}
+	return deb[:i]
 }

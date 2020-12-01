@@ -67,6 +67,14 @@ exists we leave the existing unit alone. If the install doesn't come with a unit
 install `zsh`) we will synthesize a small service unit file; for this to work the podSpec need to
 (at) least define a command to run.
 
+Now, while fiddling with this, I noticed setting up a Debian repository is an annoyingly amount of
+work and the signing of packages requires GPG and manually inputting secrets. This is why a
+short-cut for installing packages has been added. If the image name starts with `deb://` it is
+assumed an URL and the package is fetched from there and installed. The image name is the first
+string up until the `_` in the debian package name:
+`deb://example.org/tmp/coredns_1.7.1-bla_amd64.deb` will download the package from that URL and
+`coredns` will be the package name.
+
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
 unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
 will replace the first word of `ExecStart` and leave any options there. If `args` are also given
