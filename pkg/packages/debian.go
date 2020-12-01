@@ -45,7 +45,10 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 	}
 	installCmdArgs := []string{"-qq", "--assume-yes", "--no-install-recommends", "install", pkgToInstall}
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
-	installCmd.Env = append(installCmd.Env, fmt.Sprintf("POLICYRCD=%s", policyfile))
+	installCmd.Env = []string{fmt.Sprintf("POLICYRCD=%s", policyfile)} // this effectively clears the env for this command, add stuff back in
+	for _, env := range []string{"PATH", "HOME", "LOGNAME"} {
+		installCmd.Env = append(installCmd.Env, os.Getenv(env))
+	}
 
 	out, err := installCmd.CombinedOutput()
 	if err != nil {
