@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/miekg/vks/pkg/manager"
@@ -41,6 +42,13 @@ func New(cfg provider.InitConfig) (*P, error) {
 		return nil, fmt.Errorf("unsupported system")
 	case "debian", "ubuntu":
 		p.pkg = new(packages.DebianPackageManager)
+
+		// Just installed pre-requisites instead of pointing to the docs.
+		log.Printf("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
+		if err, _ := p.pkg.Install("policyrcd-script-zg2", ""); err != nil {
+			log.Printf("Failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
+		}
+
 	case "arch":
 		p.pkg = new(packages.ArchlinuxPackageManager)
 	}
