@@ -45,8 +45,12 @@ func New(cfg provider.InitConfig) (*P, error) {
 
 		// Just installed pre-requisites instead of pointing to the docs.
 		log.Printf("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
-		if err, _ := p.pkg.Install("policyrcd-script-zg2", ""); err != nil {
+		err, ok := p.pkg.Install("policyrcd-script-zg2", "")
+		if err != nil {
 			log.Printf("Failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
+		}
+		if ok {
+			log.Printf("%s is already installed", "policyrcd-script-zg2")
 		}
 
 	case "arch":

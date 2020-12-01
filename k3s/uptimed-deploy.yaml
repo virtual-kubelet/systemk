@@ -24,7 +24,7 @@ spec:
           name: demo-volume
       - name: while
         image: bash
-        command: ["/usr/bin/bash", "-c"]
+        command: ["bash", "-c"]
         args: ["while true; do ls /var/run/secrets/kubernetes.io; sleep 1; done"]
       volumes:
       - name: demo-volume
