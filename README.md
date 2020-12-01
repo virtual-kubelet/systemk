@@ -13,10 +13,13 @@ _does_ imply networking and discovery (i.e.) DNS is already working on the syste
 deploying this. How to get a system into a state it has, and can run, k3s and virtual-kubelet is an
 open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
 
-`vks` will start pods as plain processes, there are no cgroups (yet, maybe systemd will allow for
-this easily), but generally there is no isolation. You basically use the k8s control plane to start
-linux processes. There is also no address space allocated to the PODs specially, you are using the
-host's networking.
+`vks` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd
+does. This allows use to set resources limit in the future by just specifying those in the
+unit file. Generally there is no isolation in this setup - although for disk (looking at
+/var/secrets/kubernets.io/token) we use a private tmpfs.
+
+You basically use the k8s control plane to start linux processes. There is also no address space
+allocated to the PODs specially, you are using the host's networking.
 
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
 installed package is no longer used is hard, so this will not be done. `vks` will reuse the unit
@@ -40,18 +43,24 @@ I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt
 with config files etc. It may turn of that k3s + vks is a better way of handling even *2* machines.
 
 Note that getting to the stage where this all runs, is secured and everything has the correct TLS
-certs (that are also rotated) is an open question.
+certs (that are also rotated) is an open question. See https://github.com/miekg/vks/issues/39 for
+some ideas there.
 
 ## Current Status
 
 Multiple containers in a pod can be run and they can see each others storage. Creating, deleing,
-inspecting Pods all work. None of the higher level abstractions (replicaset, deployment) have been
-tried though.
+inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too.
 
 EmptyDir/ConfigMaps and Secrets are implemented, these are all backed my tmpfs, and `bind`-mounted
 into the "container".
 
-Getting logs also works, but the UI for it could be better - needs some extra setup.
+Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
+being generated.
+
+Has been tested on
+
+* ubuntu 20.04 and 18.04
+* arch (maybe?)
 
 ## Building
 
@@ -94,11 +103,6 @@ Storage is handled by systemd. Every mountpoint will get its own *tmpfs*, via bi
 By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
 process isolation. Starting two pods that use the same port is guaranteed to fail for one.
 
-## Questions
-
-* Add a private repo for debian packages. I.e. I want to install latest CoreDNS which isn't in
-  Debian. I need to add a repo for this... How?
-
 ## Use with K3S
 
 Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use the `k3s/k3s` shell
@@ -140,15 +144,12 @@ nov 19 13:39:26 draak systemd[1]: vks.default.uptimed.uptimed.service: Succeeded
 
 ## Playing With It
 
-### Debian
+### Debian/Ubuntu
 
 1. Install *k3s* and compile the virtual kubelet.
-2. Install *policyrcd-script-zg2*: `apt-get install policyrcd-script-zg2` See
-   To install daemons without starting them you will need the `policyrcd-script-zg2` package.
-   'vks' will attempt to install this on startup.
 
 I'm using `uptimed` as a very simple daemon that you (probably) haven't got installed, so we can
-check the entire flow. My testing happens on Debian/Ubuntu.
+check the entire flow.
 
 3. `./k3s/kubectl apply -f uptimed.yaml`
 
