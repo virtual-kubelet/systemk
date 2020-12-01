@@ -92,13 +92,13 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
 		err, installed := p.pkg.Install(c.Image, "")
 		if err != nil {
-			log.Printf("Failed to install: %s", err)
+			log.Printf("Failed to install package %q: %s", c.Image, err)
 			return err
 		}
 
 		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {
-			log.Printf("Failed to create/use unit file: %s", err)
+			log.Printf("Failed to create/use unit file for %q: %s", c.Image, err)
 			return err
 		}
 
