@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: while
+  labels:
+    name: while
+spec:
+  securityContext:
+    runAsUser: 1 # 'daemon' on debian YMMV
+  containers:
+  - name: while
+    image: bash
+    volumeMounts:
+    - mountPath: /data/cdrom
+      name: demo-volume
+    command: ["bash", "-c"]
+    args: ["while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"]
+  volumes:
+  - name: demo-volume
+    emptyDir: {}
