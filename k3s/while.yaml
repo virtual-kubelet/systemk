@@ -5,16 +5,21 @@ metadata:
   labels:
     name: while
 spec:
-  securityContext:
-    runAsUser: 1 # 'daemon' on debian YMMV
   containers:
-  - name: while
+  - name: while-echo
     image: bash
     volumeMounts:
     - mountPath: /data/cdrom
       name: demo-volume
     command: ["bash", "-c"]
     args: ["while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"]
+  - name: while-ls
+    image: bash
+    volumeMounts:
+    - mountPath: /data/cdrom
+      name: demo-volume
+    command: ["bash", "-c"]
+    args: ["while true; do ls /data/cdrom; sleep 1; done"]
   volumes:
   - name: demo-volume
     emptyDir: {}

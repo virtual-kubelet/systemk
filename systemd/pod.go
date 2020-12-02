@@ -72,8 +72,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 	uid, gid := UidGidFromSecurityContext(pod)
 
-	joinsNamespaceOf := ""
-	for i, c := range pod.Spec.Containers {
+	for _, c := range pod.Spec.Containers {
 		tmp := []string{"/var", "/run"}
 		bindmounts := []string{}
 		bindmountsro := []string{}
@@ -116,6 +115,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		// What do we do with the defaults from the unit file - they are probably more sensible than blindly running as root.
 		// Keep them? TODO(miek): needs to be documented.
+		// If there is a securityContext we'll use that.
 		if uid != "" {
 			uf = uf.Overwrite("Service", "User", uid)
 		}
@@ -135,18 +135,13 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "uid", uid)
-		if i == 0 { // First container of the lot
-			tmpfs := strings.Join(tmp, " ")
-			uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
-			mount := strings.Join(bindmounts, " ")
-			uf = uf.Insert("Service", "BindPaths", mount)
-			romount := strings.Join(bindmountsro, " ")
-			uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
 
-			joinsNamespaceOf = name
-		} else {
-			uf = uf.Insert("Unit", "JoinsNamespaceOf", joinsNamespaceOf)
-		}
+		tmpfs := strings.Join(tmp, " ")
+		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
+		mount := strings.Join(bindmounts, " ")
+		uf = uf.Insert("Service", "BindPaths", mount)
+		romount := strings.Join(bindmountsro, " ")
+		uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
 
 		for _, env := range p.defaultEnvironment() {
 			uf = uf.Insert("Service", "Environment", env)
