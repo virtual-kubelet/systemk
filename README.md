@@ -51,6 +51,9 @@ some ideas there.
 Multiple containers in a pod can be run and they can see each others storage. Creating, deleting,
 inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too.
 
+Note due to how we bind mount emptyDirs into the container, you need to have a securityContext
+runAsUser=0, otherwise you can't write to the empty dir.
+
 EmptyDir/ConfigMaps and Secrets are implemented, these are all backed bind-mounts.
 
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
