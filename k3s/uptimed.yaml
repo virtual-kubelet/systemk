@@ -5,18 +5,20 @@ metadata:
   labels:
     name: uptimed
 spec:
+  securityContext:
+    runAsUser: 1 # 'daemon' on debian YMMV
   containers:
   - name: uptimed
     image: uptimed
     ports:
     - containerPort: 2222
     volumeMounts:
-    - mountPath: /cdrom
+    - mountPath: /data/cdrom
       name: demo-volume
   - name: while
     image: bash
     command: ["bash", "-c"]
-    args: ["while true; do ls /var/run/secrets/kubernetes.io; sleep 1; done"]
+    args: ["while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"]
   volumes:
   - name: demo-volume
     emptyDir: {}

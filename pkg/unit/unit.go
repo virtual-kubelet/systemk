@@ -95,7 +95,7 @@ func (u *File) Insert(section, name string, value ...string) *File {
 	return newFromOptions(u.Options)
 }
 
-// Overwrite overwrites name=value in the section and returns a newly parsed pointer to File.
+// Overwrite overwrites name=value in the section and returns a new File.
 func (u *File) Overwrite(section, name string, value ...string) *File {
 	opts := make([]*unit.UnitOption, len(u.Options))
 	j := 0

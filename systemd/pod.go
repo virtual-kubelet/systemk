@@ -70,22 +70,28 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
+	uid, gid := UidGidFromSecurityContext(pod)
+
 	joinsNamespaceOf := ""
 	for i, c := range pod.Spec.Containers {
 		tmp := []string{"/var", "/run"}
-		bindmounts := []string{} // per pod
+		bindmounts := []string{}
+		bindmountsro := []string{}
 		for _, v := range c.VolumeMounts {
-			// readonly needs to be handled here. We need slighty more than a map and something to turn it into systemd directives.
 			dir, ok := vol[v.Name]
 			if !ok {
 				log.Printf("failed to find volumeMount %s in the specific volumes, skpping", v.Name)
 				continue
 			}
-			tmp = append(tmp, v.MountPath)
 			if dir == "" { // empty dir emptyDir, no bind mount for this one
 				continue
 			}
 
+			tmp = append(tmp, v.MountPath)
+			if v.ReadOnly {
+				bindmountsro = append(bindmountsro, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
+				continue
+			}
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 		}
 
@@ -105,8 +111,20 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 
-		// do permissions properly, TODO(miek): fix soon!! We need to chmod our mountpoints??
-		uf = uf.Overwrite("Service", "User", "root")
+		uf = uf.Overwrite("Service", "ProtectSystem", "true")
+		uf = uf.Overwrite("Service", "ProtectHome", "tmpfs")
+		uf = uf.Overwrite("Service", "PrivateMounts", "true")
+		uf = uf.Insert("Service", "StandardOutput", "journal")
+		uf = uf.Insert("Service", "StandardError", "journal")
+
+		// What do we do with the defaults from the unit file - they are probably more sensible than blindly running as root.
+		// Keep them? TODO(miek): needs to be documented.
+		if uid != "" {
+			uf = uf.Overwrite("Service", "User", uid)
+		}
+		if gid != "" {
+			uf = uf.Overwrite("Service", "Group", gid)
+		}
 
 		// keep the unit around, the control plane where clear it with a DeletePod
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
@@ -125,6 +143,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
 			mount := strings.Join(bindmounts, " ")
 			uf = uf.Insert("Service", "BindPaths", mount)
+			romount := strings.Join(bindmountsro, " ")
+			uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
 
 			joinsNamespaceOf = name
 		} else {

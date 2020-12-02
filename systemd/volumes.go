@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -23,11 +24,11 @@ var (
 // should be used for this. The on-disk structure is prepared and can be used.
 func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 	vol := make(map[string]string)
-	uid := string(pod.ObjectMeta.UID)
-	for _, v := range pod.Spec.Volumes {
-		log.Printf("Looking at volume %q", v.Name)
+	id := string(pod.ObjectMeta.UID)
+	uid, gid := UidGidFromSecurityContext(pod)
+	for i, v := range pod.Spec.Volumes {
+		log.Printf("Looking at volume %q#%d", v.Name, i)
 		switch {
-
 		case v.EmptyDir != nil:
 			vol[v.Name] = "" // doesn't need a bind mount
 
@@ -40,9 +41,13 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, uid)
+			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, secretDir)
-			if err := os.MkdirAll(dir, 0750); err != nil {
+			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
+			if err := os.MkdirAll(dir, 2750); err != nil {
+				return nil, err
+			}
+			if err := chown(dir, uid, gid); err != nil {
 				return nil, err
 			}
 
@@ -80,11 +85,16 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, uid)
+			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, configmapDir)
-			if err := os.MkdirAll(dir, 0750); err != nil {
+			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
+			if err := os.MkdirAll(dir, 2750); err != nil {
 				return nil, err
 			}
+			if err := chown(dir, uid, gid); err != nil {
+				return nil, err
+			}
+
 			log.Printf("Created %q for configmap: %s", dir, v.Name)
 
 			for k, v := range configMap.Data {
@@ -110,4 +120,19 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 	}
 
 	return vol, nil
+}
+
+// chown chowns name with uid and gid.
+func chown(name, uid, gid string) error {
+	// we're parsing uid/gid back and forth
+	uidn, err := strconv.ParseInt(uid, 10, 64)
+	if err != nil {
+		uidn = -1
+	}
+	gidn, err := strconv.ParseInt(gid, 10, 64)
+	if err != nil {
+		gidn = -1
+	}
+
+	return os.Chown(name, int(uidn), int(gidn))
 }
