@@ -85,9 +85,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 			tmp = append(tmp, v.MountPath)
 
-			if dir == "" { // empty dir emptyDir, no bind mount for this one, but we do want it in the tmp slice
-				continue
-			}
 			if v.ReadOnly {
 				bindmountsro = append(bindmountsro, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 				continue

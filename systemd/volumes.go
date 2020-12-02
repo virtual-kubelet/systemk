@@ -16,6 +16,7 @@ import (
 // Where this files life is still an open question, right now we bind mount everything into place.
 var (
 	varrun       = "/var/run"
+	emptyDir     = "emptydirs"
 	secretDir    = "secrets"
 	configmapDir = "configmaps"
 )
@@ -30,7 +31,18 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 		log.Printf("Looking at volume %q#%d", v.Name, i)
 		switch {
 		case v.EmptyDir != nil:
-			vol[v.Name] = "" // doesn't need a bind mount
+			dir := filepath.Join(varrun, id)
+			dir = filepath.Join(dir, emptyDir)
+			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
+			if err := os.MkdirAll(dir, 2750); err != nil {
+				return nil, err
+			}
+			if err := chown(dir, uid, gid); err != nil {
+				return nil, err
+			}
+
+			log.Printf("Created %q for emptyDir: %s", dir, v.Name)
+			vol[v.Name] = dir
 
 		case v.Secret != nil:
 			secret, err := p.rm.GetSecret(v.Secret.SecretName, pod.Namespace)
