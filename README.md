@@ -48,11 +48,10 @@ some ideas there.
 
 ## Current Status
 
-Multiple containers in a pod can be run and they can see each others storage. Creating, deleing,
+Multiple containers in a pod can be run and they can see each others storage. Creating, deleting,
 inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too.
 
-EmptyDir/ConfigMaps and Secrets are implemented, these are all backed my tmpfs, and `bind`-mounted
-into the "container".
+EmptyDir/ConfigMaps and Secrets are implemented, these are all backed bind-mounts.
 
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
 being generated.
@@ -94,9 +93,11 @@ We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section.
 know a pod state vks will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
 
-Storage is handled by systemd. Every mountpoint will get its own *tmpfs*, via bind mounts
-(`BindPaths`) we mount secrets and config maps into the tmpfs. Each pod gets two tmpfss by default,
-"/var" and "/run". All other paths are directly coming from the machine.
+Storage is handled by systemd. Every mountpoint will be bind mounted into the container. All storage
+is done on disk in the /var/run directory, and those directories will, as said, be bind mounted to
+the unit.
+
+Two paths: "/var" and "/run" are a TemporaryFileSystem.
 
 ### Limitations
 

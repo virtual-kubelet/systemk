@@ -71,9 +71,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	}
 
 	uid, gid := UidGidFromSecurityContext(pod)
+	tmp := []string{"/var", "/run"}
 
 	for _, c := range pod.Spec.Containers {
-		tmp := []string{"/var", "/run"}
 		bindmounts := []string{}
 		bindmountsro := []string{}
 		for _, v := range c.VolumeMounts {
@@ -82,7 +82,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				log.Printf("failed to find volumeMount %s in the specific volumes, skpping", v.Name)
 				continue
 			}
-			tmp = append(tmp, v.MountPath)
 
 			if v.ReadOnly {
 				bindmountsro = append(bindmountsro, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
