@@ -14,9 +14,9 @@ deploying this. How to get a system into a state it has, and can run, k3s and vi
 open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
 
 `vks` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd
-does. This allows use to set resources limit in the future by just specifying those in the
-unit file. Generally there is no isolation in this setup - although for disk (looking at
-/var/secrets/kubernets.io/token) we use a private tmpfs.
+has. This allows use to set resources limit in the future by just specifying those in the
+unit file. Generally there is no isolation in this setup - although for disk access things
+are fairly contained, i.e. /var/secrets/kubernets.io/token will be bind mounted into the unit.
 
 You basically use the k8s control plane to start linux processes. There is also no address space
 allocated to the PODs specially, you are using the host's networking.
@@ -24,7 +24,8 @@ allocated to the PODs specially, you are using the host's networking.
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
 installed package is no longer used is hard, so this will not be done. `vks` will reuse the unit
 file that comes from this install. However some other data is inject into it to make it work fully
-for vks.
+for vks. If there isn't an unit file (e.g. you use `bash` as the image), a unit file will be
+synthesized.
 
 Each scheduled unit will adhere to a naming scheme so `vks` knows which ones are managed by it.
 
@@ -51,10 +52,9 @@ some ideas there.
 Multiple containers in a pod can be run and they can see each others storage. Creating, deleting,
 inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too.
 
-Note due to how we bind mount emptyDirs into the container, you need to have a securityContext
-runAsUser=0, otherwise you can't write to the empty dir.
-
-EmptyDir/ConfigMaps and Secrets are implemented, these are all backed bind-mounts.
+EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
+bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
+are read-only or read-write depending on settings.
 
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
 being generated.
@@ -95,12 +95,6 @@ only the options/args will be replaced.
 We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
 know a pod state vks will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
-
-Storage is handled by systemd. Every mountpoint will be bind mounted into the container. All storage
-is done on disk in the /var/run directory, and those directories will, as said, be bind mounted to
-the unit.
-
-Two paths: "/var" and "/run" are a TemporaryFileSystem.
 
 ### Limitations
 
