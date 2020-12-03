@@ -35,7 +35,15 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	}
 
 	if _, ok := uf.Contents[kubernetesSection]; !ok {
-		log.Printf("Unit did not container %s section", kubernetesSection)
+		log.Printf("Unit %q did not container %s section", name, kubernetesSection)
+		// delete it
+		if err := p.m.TriggerStop(name); err != nil {
+			log.Printf("Failed to triggger top: %s", err)
+		}
+		if err := p.m.Unload(name); err != nil {
+			log.Printf("Failed to unload: %s", err)
+		}
+		p.m.ReloadUnitFiles()
 		return nil
 	}
 

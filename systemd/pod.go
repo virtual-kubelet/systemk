@@ -77,6 +77,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	for _, c := range pod.Spec.Containers {
 		bindmounts := []string{}
 		bindmountsro := []string{}
+		rwpaths := []string{} // everything is RO, this will enable to pod to write to specific dirs.
 		for _, v := range c.VolumeMounts {
 			dir, ok := vol[v.Name]
 			if !ok {
@@ -89,6 +90,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				continue
 			}
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
+			rwpaths = append(rwpaths, v.MountPath)
 
 			// OK, so the v.MountPath will _exist_ on the system, as systemd will create it, BUT the permissions/ownership might be wrong
 			// We will chown the directory to the user/group of the security context, but the directory is created by systemd, when it
@@ -148,6 +150,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Overwrite("Service", "ProtectSystem", "true")
 		uf = uf.Overwrite("Service", "ProtectHome", "tmpfs")
 		uf = uf.Overwrite("Service", "PrivateMounts", "true")
+		uf = uf.Overwrite("Service", "ReadOnlyPaths", "/")
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
@@ -161,7 +164,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			uf = uf.Overwrite("Service", "Group", gid)
 		}
 
-		// keep the unit around, the control plane where clear it with a DeletePod
+		// keep the unit around, the control plane where clear it with a DeletePod.
+		// this is also for us to return the state even after the unit left the stage.
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
 		execStart := commandAndArgs(uf, c)
@@ -172,10 +176,14 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		id := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
 		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "ClusterName", pod.ObjectMeta.ClusterName)
-		uf = uf.Insert(kubernetesSection, "Uid", id)
+		uf = uf.Insert(kubernetesSection, "Id", id)
 
 		tmpfs := strings.Join(tmp, " ")
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
+		if len(rwpaths) > 0 {
+			paths := strings.Join(rwpaths, " ")
+			uf = uf.Insert("Service", "ReadWritePaths", paths)
+		}
 		if len(bindmounts) > 0 {
 			mount := strings.Join(bindmounts, " ")
 			uf = uf.Insert("Service", "BindPaths", mount)
@@ -253,6 +261,7 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to unload: %s", err)
 		}
 	}
+	p.m.ReloadUnitFiles()
 	return nil
 }
 
