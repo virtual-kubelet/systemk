@@ -89,8 +89,11 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				bindmountsro = append(bindmountsro, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 				continue
 			}
-			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 			rwpaths = append(rwpaths, v.MountPath)
+			if dir == "" { // hostPath
+				continue
+			}
+			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
 
 			// OK, so the v.MountPath will _exist_ on the system, as systemd will create it, BUT the permissions/ownership might be wrong
 			// We will chown the directory to the user/group of the security context, but the directory is created by systemd, when it

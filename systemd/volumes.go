@@ -31,6 +31,9 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 	for i, v := range pod.Spec.Volumes {
 		log.Printf("Looking at volume %q#%d", v.Name, i)
 		switch {
+		case v.HostPath != nil:
+			vol[v.Name] = ""
+
 		case v.EmptyDir != nil:
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, emptyDir)
