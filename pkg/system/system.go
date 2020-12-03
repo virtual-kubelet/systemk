@@ -2,29 +2,31 @@ package system
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
+	"syscall"
 )
 
 // Memory returns the amount of memory in the system.
 func Memory() string {
-	buf, err := ioutil.ReadFile("/proc/meminfo")
+	in := &syscall.Sysinfo_t{}
+	err := syscall.Sysinfo(in)
 	if err != nil {
 		return ""
 	}
-	// First line is MemTotal which we're intested in
-	i := bytes.Index(buf, []byte("\n"))
-	if i == 0 {
-		return ""
-	}
-	line := bytes.ReplaceAll(buf[:i], []byte("MemTotal:"), []byte{})
-	line = bytes.TrimSpace(line)
-	line = bytes.ReplaceAll(line, []byte(" "), []byte{}) // space between number and unit
-	amount := line[:len(line)-1]                         // cut of last B
-	return string(amount)
+
+	// If this is a 32-bit system, then these fields are
+	// uint32 instead of uint64.
+	// So we always convert to uint64 to match signature.
+	// We divide / 1024 since we want kb
+
+	totalMem := uint64(in.Totalram) * uint64(in.Unit) / 1024
+	str := fmt.Sprintf("%sk", strconv.FormatUint(totalMem, 10))
+	return str
 }
 
 // CPU returns the number of CPUs in the system as reported by nproc.
