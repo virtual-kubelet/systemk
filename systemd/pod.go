@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -88,6 +89,45 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				continue
 			}
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
+
+			// OK, so the v.MountPath will _exist_ on the system, as systemd will create it, BUT the permissions/ownership might be wrong
+			// We will chown the directory to the user/group of the security context, but the directory is created by systemd, when it
+			// performs the automount. We'll add ExecPreStart that chowns the directory, but only if it's empty, otherwise we might be
+			// messing with some system directory - this may still be the case when the dir is empty though. Because a StartExecPre to check
+			// this would be a shell script we make the check here:
+			// * create/chown if not exist
+			// * chown if empty dir
+			// * anything else don't touch: this likely makes the unit start, but then fail. (we may intercept this and return a decent message
+			//   so you can see this with events
+			//
+			// Cleanup of these directories is hard - systemd clean <unit> exists for doesn't assume other units are using this space.
+			_, err := os.Stat(v.MountPath)
+			switch os.IsNotExist(err) {
+			case true: // doesn't exist
+				log.Printf("Creating %q", v.MountPath)
+				if err := os.MkdirAll(v.MountPath, 2750); err != nil {
+					return err // return err? This will be an event. TODO: tweak message
+				}
+				log.Printf("Chowning %q", v.MountPath)
+				if err := chown(v.MountPath, uid, gid); err != nil {
+					return err
+				}
+			case false: // exist
+				// chmod as well? 2750
+				empty, err := isEmpty(v.MountPath)
+				if err != nil {
+					return err
+				}
+				if !empty {
+					log.Printf("Directory %q is not empty, refusing to touch", v.MountPath)
+					// error, log, something??
+					break
+				}
+				log.Printf("Chowning %q", v.MountPath)
+				if err := chown(v.MountPath, uid, gid); err != nil {
+					return err
+				}
+			}
 		}
 
 		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??

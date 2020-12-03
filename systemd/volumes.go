@@ -3,6 +3,7 @@ package systemd
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -147,4 +148,18 @@ func chown(name, uid, gid string) error {
 	}
 
 	return os.Chown(name, int(uidn), int(gidn))
+}
+
+func isEmpty(name string) (bool, error) {
+	d, err := os.Open(name)
+	if err != nil {
+		return false, err
+	}
+	defer d.Close()
+
+	_, err = d.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }
