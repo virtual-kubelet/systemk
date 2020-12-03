@@ -105,7 +105,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			switch os.IsNotExist(err) {
 			case true: // doesn't exist
 				log.Printf("Creating %q", v.MountPath)
-				if err := os.MkdirAll(v.MountPath, 2750); err != nil {
+				if err := os.MkdirAll(v.MountPath, dirPerms); err != nil {
 					return err // return err? This will be an event. TODO: tweak message
 				}
 				log.Printf("Chowning %q", v.MountPath)
@@ -113,7 +113,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 					return err
 				}
 			case false: // exist
-				// chmod as well? 2750
 				empty, err := isEmpty(v.MountPath)
 				if err != nil {
 					return err
@@ -170,17 +169,21 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		name := PodToUnitName(pod, c.Name)
 
-		uid := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
-		uf = uf.Insert(kubernetesSection, "namespace", pod.ObjectMeta.Namespace)
-		uf = uf.Insert(kubernetesSection, "clusterName", pod.ObjectMeta.ClusterName)
-		uf = uf.Insert(kubernetesSection, "uid", uid)
+		id := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
+		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)
+		uf = uf.Insert(kubernetesSection, "ClusterName", pod.ObjectMeta.ClusterName)
+		uf = uf.Insert(kubernetesSection, "Uid", id)
 
 		tmpfs := strings.Join(tmp, " ")
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
-		mount := strings.Join(bindmounts, " ")
-		uf = uf.Insert("Service", "BindPaths", mount)
-		romount := strings.Join(bindmountsro, " ")
-		uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
+		if len(bindmounts) > 0 {
+			mount := strings.Join(bindmounts, " ")
+			uf = uf.Insert("Service", "BindPaths", mount)
+		}
+		if len(bindmountsro) > 0 {
+			romount := strings.Join(bindmountsro, " ")
+			uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
+		}
 
 		for _, env := range p.defaultEnvironment() {
 			uf = uf.Insert("Service", "Environment", env)

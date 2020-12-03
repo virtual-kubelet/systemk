@@ -35,7 +35,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, emptyDir)
 			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := os.MkdirAll(dir, 2750); err != nil {
+			if err := os.MkdirAll(dir, dirPerms); err != nil {
 				return nil, err
 			}
 			if err := chown(dir, uid, gid); err != nil {
@@ -57,7 +57,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, secretDir)
 			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := os.MkdirAll(dir, 2750); err != nil {
+			if err := os.MkdirAll(dir, dirPerms); err != nil {
 				return nil, err
 			}
 			if err := chown(dir, uid, gid); err != nil {
@@ -101,7 +101,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, configmapDir)
 			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := os.MkdirAll(dir, 2750); err != nil {
+			if err := os.MkdirAll(dir, dirPerms); err != nil {
 				return nil, err
 			}
 			if err := chown(dir, uid, gid); err != nil {
@@ -163,3 +163,5 @@ func isEmpty(name string) (bool, error) {
 	}
 	return false, err
 }
+
+const dirPerms = 02750

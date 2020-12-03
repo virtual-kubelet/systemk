@@ -42,9 +42,9 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	// MetaData as injected by CreatePod.
 	om := metav1.ObjectMeta{
 		Name:        Pod(name),
-		Namespace:   (uf.Contents[kubernetesSection]["namespace"])[0],
-		ClusterName: (uf.Contents[kubernetesSection]["clusterName"])[0],
-		UID:         types.UID((uf.Contents[kubernetesSection]["uid"])[0]),
+		Namespace:   (uf.Contents[kubernetesSection]["Namespace"])[0],
+		ClusterName: (uf.Contents[kubernetesSection]["ClusterName"])[0],
+		UID:         types.UID((uf.Contents[kubernetesSection]["Id"])[0]),
 	}
 
 	containers := p.toContainers(stats)
