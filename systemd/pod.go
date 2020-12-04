@@ -147,6 +147,16 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to create/use unit file for %q: %s", c.Image, err)
 			return err
 		}
+		// disable the systemd unit for the system if there, and only if we installed the package
+		if installed {
+			unitfile, err := p.pkg.Unitfile(c.Image)
+			if err != nil {
+				break
+			}
+			if err := p.m.Mask(unitfile); err != nil {
+				log.Printf("failed to mask system unit %q: %s", unitfile, err)
+			}
+		}
 
 		uf = uf.Overwrite("Service", "ProtectSystem", "true")
 		uf = uf.Overwrite("Service", "ProtectHome", "tmpfs")

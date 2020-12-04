@@ -21,6 +21,7 @@ func (t *TestManager) Unload(name string) error {
 	return nil
 }
 
+func (t *TestManager) Mask(name string) error                       { return nil }
 func (t *TestManager) TriggerStart(name string) error               { return nil }
 func (t *TestManager) TriggerStop(name string) error                { return nil }
 func (t *TestManager) State(name string) (*unit.State, error)       { return &unit.State{}, nil }
