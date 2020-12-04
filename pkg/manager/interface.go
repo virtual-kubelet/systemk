@@ -7,7 +7,6 @@ type Manager interface {
 	// this is an interface mostly for testing.
 	Disable(name string) error
 	Load(name string, u unit.File) error
-	Mask(name string) error
 	Properties(name string) (map[string]interface{}, error)
 	Property(name, property string) string
 	Reload() error
