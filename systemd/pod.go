@@ -67,8 +67,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	vol, err := p.volumes(pod)
 	if err != nil {
 		log.Printf("Failed to setup volumes: %s", err)
-		// this needs a fake unit or somesuch, so we can use that mechanism to convey state.
-		return err
 	}
 
 	uid, gid := UidGidFromSecurityContext(pod)
@@ -264,7 +262,7 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to unload: %s", err)
 		}
 	}
-	p.m.ReloadUnitFiles()
+	p.m.Reload()
 	return nil
 }
 

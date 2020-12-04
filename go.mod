@@ -3,6 +3,7 @@ module github.com/miekg/vks
 go 1.15
 
 require (
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/gorilla/mux v1.7.3
 	github.com/miekg/go-systemd v0.0.0-20201113131452-5b28b7ed4aa7
 	github.com/spf13/pflag v1.0.5
@@ -10,6 +11,7 @@ require (
 	github.com/virtual-kubelet/virtual-kubelet v1.3.0
 	k8s.io/api v0.18.4
 	k8s.io/apimachinery v0.18.4
+	k8s.io/client-go v0.18.4
 )
 
 replace (

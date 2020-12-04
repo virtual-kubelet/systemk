@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uptimed
+  labels:
+    name: uptimed
+spec:
+  securityContext:
+    runAsUser: 1 # 'daemon' on debian YMMV
+  containers:
+  - name: uptimed
+    image: uptimed
+    ports:
+    - containerPort: 2222
+  - name: while
+    image: bash
+    command: ["/bin/bash", "-c"]
+    args: ["while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"]
+    volumeMounts:
+    - mountPath: /data/cdrom
+      name: demo-volume
+  volumes:
+  - name: demo-volume
+    emptyDir: {}

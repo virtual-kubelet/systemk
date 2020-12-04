@@ -179,8 +179,13 @@ func (m *UnitManager) readUnit(name string) (string, error) {
 	return "", fmt.Errorf("no unit file at local path %s", path)
 }
 
-// ReloadUnitFiles tells systemd to reload all unit files.
-func (m *UnitManager) ReloadUnitFiles() error { return m.systemd.Reload() }
+// Reload tells systemd to reload all unit files.
+func (m *UnitManager) Reload() error { return m.systemd.Reload() }
+
+func (m *UnitManager) Unit(name string) string {
+	log.Printf("not implemented, used for testing")
+	return ""
+}
 
 // Units enumerates all files recognized as valid systemd units in
 // this manager's units directory.
@@ -243,7 +248,7 @@ func (m *UnitManager) removeUnit(name string) (err error) {
 
 	// both DisableUnitFiles() and ResetFailedUnit() must be followed by
 	// removing the unit file. Otherwise "systemctl stop fleet" could end up hanging forever.
-	if errf := m.DisableUnitFile(name); errf != nil {
+	if errf := m.Disable(name); errf != nil {
 		err = fmt.Errorf("%v, %v", err, errf)
 	}
 
@@ -257,8 +262,8 @@ func (m *UnitManager) removeUnit(name string) (err error) {
 	return err
 }
 
-// DisableUnitFile disable the unit named via name.
-func (m *UnitManager) DisableUnitFile(name string) error {
+// Disable disable the unit named via name.
+func (m *UnitManager) Disable(name string) error {
 	_, err := m.systemd.DisableUnitFiles([]string{name}, true)
 	return err
 }

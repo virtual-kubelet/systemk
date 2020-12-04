@@ -43,7 +43,7 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 		if err := p.m.Unload(name); err != nil {
 			log.Printf("Failed to unload: %s", err)
 		}
-		p.m.ReloadUnitFiles()
+		p.m.Reload()
 		return nil
 	}
 

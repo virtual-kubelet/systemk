@@ -18,7 +18,7 @@ var unitDir = "/var/run/vks"
 
 // P is a systemd provider.
 type P struct {
-	m   *manager.UnitManager
+	m   manager.Manager
 	pkg packages.PackageManager
 	rm  *vkmanager.ResourceManager
 
