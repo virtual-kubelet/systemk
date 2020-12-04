@@ -14,7 +14,7 @@ import (
 // prefix (deb://, or arch://). etc.
 func fetch(pkg, version string) (string, error) {
 	c := new(http.Client)
-	c.Timeout = 5 * time.Second
+	c.Timeout = 240 * time.Second
 
 	pkg = "https://" + pkg
 	log.Printf("Fetching from %s", pkg)

@@ -22,7 +22,7 @@ import (
 
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	log.Print("GetPod called")
-	stats, err := p.m.States(Prefix)
+	stats, err := p.m.States(UnitPrefix(namespace, name))
 	if err != nil {
 		log.Printf("Failed to get states: %s", err)
 		return nil, nil
