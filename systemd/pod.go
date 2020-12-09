@@ -139,8 +139,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			log.Printf("Failed to install package %q: %s", c.Image, err)
 			return err
 		}
-
 		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
+		if installed {
+			p.m.Mask(c.Image + unit.ServiceSuffix)
+		}
 
 		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {

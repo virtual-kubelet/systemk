@@ -27,6 +27,7 @@ func (t *TestManager) State(name string) (*unit.State, error)       { return &un
 func (t *TestManager) Property(name, property string) string        { return "" }
 func (t *TestManager) ServiceProperty(name, property string) string { return "" }
 func (t *TestManager) Reload() error                                { return nil }
+func (t *TestManager) Mask(name string) error                       { return nil }
 
 func (t *TestManager) Properties(name string) (map[string]interface{}, error) {
 	return map[string]interface{}{}, nil

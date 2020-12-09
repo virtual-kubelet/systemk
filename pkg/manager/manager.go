@@ -268,6 +268,12 @@ func (m *UnitManager) Disable(name string) error {
 	return err
 }
 
+// Mask masks a unit.
+func (m *UnitManager) Mask(name string) error {
+	_, err := m.systemd.MaskUnitFiles([]string{name}, true, true)
+	return err
+}
+
 func (m *UnitManager) getUnitFilePath(name string) string {
 	return path.Join(m.unitsDir, name)
 }
