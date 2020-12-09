@@ -17,8 +17,8 @@ RemainAfterExit=true
 ExecStart=need to be overwritten
 TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
-Environment=KUBERNETES_PORT=443
-Environment=KUBERNETES_HOST=127.0.0.1
+Environment=KUBERNETES_SERVICE_PORT=6444
+Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
 
 [X-Kubernetes]
 Namespace=default
@@ -43,8 +43,8 @@ RemainAfterExit=true
 ExecStart=/bin/bash -c "while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"
 TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
-Environment=KUBERNETES_PORT=443
-Environment=KUBERNETES_HOST=127.0.0.1
+Environment=KUBERNETES_SERVICE_PORT=6444
+Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
 
 [X-Kubernetes]
 Namespace=default

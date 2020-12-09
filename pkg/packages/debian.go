@@ -27,20 +27,11 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
-	// this doesn't find packages that are NOT completed purged
-	checkCmd := exec.Command(dpkgCommand, "-s", pkg)
-	err := checkCmd.Run()
-	if err == nil {
-		// package exists
-		// TODO: check installed version
+	log.Printf("Checking if %q is installed", p.Clean(pkg))
+	checkCmd := exec.Command(dpkgCommand, "-s", p.Clean(pkg))
+	if err := checkCmd.Run(); err == nil {
 		return nil, false
 	}
-
-	policyfile, err := policy()
-	if err != nil {
-		return err, false
-	}
-	defer os.Remove(policyfile)
 
 	installCmd := new(exec.Cmd)
 	switch {
@@ -59,14 +50,20 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 		installCmdArgs := []string{"-qq", "--assume-yes", "--no-install-recommends", "install", pkgToInstall}
 		installCmd = exec.Command(aptGetCommand, installCmdArgs...)
 	}
+
+	policyfile, err := policy()
+	if err != nil {
+		return err, false
+	}
+	defer os.Remove(policyfile)
+
 	installCmd.Env = []string{fmt.Sprintf("POLICYRCD=%s", policyfile)} // this effectively clears the env for this command, add stuff back in
 	for _, env := range []string{"PATH", "HOME", "LOGNAME"} {
 		installCmd.Env = append(installCmd.Env, env+"="+os.Getenv(env))
 	}
 
 	log.Printf("Running %s", installCmd)
-	out, err := installCmd.CombinedOutput()
-	if err != nil {
+	if out, err := installCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to install: %s\n%s", err, out), false
 	}
 	return nil, true

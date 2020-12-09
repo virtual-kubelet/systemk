@@ -110,6 +110,21 @@ func (u *File) Overwrite(section, name string, value ...string) *File {
 	return u.Insert(section, name, value...)
 }
 
+// Delete deletes name in the named section and returns a new File.
+func (u *File) Delete(section, name string) *File {
+	opts := make([]*unit.UnitOption, len(u.Options))
+	j := 0
+	for _, o := range u.Options {
+		if o.Section == section && o.Name == name {
+			continue
+		}
+		opts[j] = o
+		j++
+	}
+	u.Options = opts[:j]
+	return u
+}
+
 // DefaultUnitType appends the default unit type to a given unit name, ignoring
 // any file extensions that already exist.
 func DefaultUnitType(name string) string {

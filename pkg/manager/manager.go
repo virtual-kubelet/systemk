@@ -197,7 +197,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d statusses returned", len(dbusStatuses))
+	log.Printf("%d statusses for prefix %q returned", len(dbusStatuses), prefix)
 
 	states := make(map[string]*unit.State)
 	for _, dus := range dbusStatuses {
@@ -215,7 +215,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 		states[dus.Name] = us
 	}
 
-	log.Printf("Left with %d statuses", len(states))
+	log.Printf("Left with %d statuses for prefix %q", len(states), prefix)
 
 	return states, nil
 }

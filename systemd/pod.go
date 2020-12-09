@@ -155,8 +155,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
-		// What do we do with the defaults from the unit file - they are probably more sensible than blindly running as root.
-		// Keep them? TODO(miek): needs to be documented.
 		// If there is a securityContext we'll use that.
 		if uid != "" {
 			uf = uf.Overwrite("Service", "User", uid)
@@ -192,6 +190,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if len(bindmountsro) > 0 {
 			romount := strings.Join(bindmountsro, " ")
 			uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
+		}
+
+		for _, del := range deleteOptions {
+			uf = uf.Delete("Service", del)
 		}
 
 		for _, env := range p.defaultEnvironment() {
@@ -311,3 +313,7 @@ const (
 	Prefix    = "vks"
 	separator = "."
 )
+
+// deleteOptions has a list of options we will always delete from the unit files
+// as they clash with the podSpec.
+var deleteOptions = []string{"EnvironmentFile"}
