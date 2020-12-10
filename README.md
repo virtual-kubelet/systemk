@@ -143,7 +143,7 @@ nov 19 13:39:26 draak systemd[1]: Stopping uptime record daemon...
 nov 19 13:39:26 draak systemd[1]: systemk.default.uptimed.uptimed.service: Succeeded.
 ~~~
 
-### Prometheus discovery targets to Scrape
+### Prometheus discovering targets to Scrape
 
 The includes manifests `k3s/prometheus.yaml` and `k3s/uptimed.yaml` install a prometheus with k8s
 support and the uptimed. This allows prom to find the open ports for uptimed and will start scraping
