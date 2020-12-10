@@ -3,7 +3,7 @@ package packages
 import (
 	"testing"
 
-	"github.com/miekg/systemk/pkg/system"
+	"github.com/virtual-kubelet/systemk/pkg/system"
 )
 
 func TestDebian(t *testing.T) {

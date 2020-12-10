@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	"github.com/miekg/go-systemd/dbus"
-	"github.com/miekg/systemk/pkg/unit"
+	"github.com/virtual-kubelet/systemk/pkg/unit"
 )
 
 // UnitManager manages units via a dBus connection to systemd.

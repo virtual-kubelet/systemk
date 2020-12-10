@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/miekg/systemk/pkg/unit"
+	"github.com/virtual-kubelet/systemk/pkg/unit"
 	corev1 "k8s.io/api/core/v1"
 )
 

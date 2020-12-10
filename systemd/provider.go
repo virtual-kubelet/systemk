@@ -5,11 +5,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/miekg/systemk/pkg/manager"
-	"github.com/miekg/systemk/pkg/packages"
-	"github.com/miekg/systemk/pkg/system"
 	vkmanager "github.com/virtual-kubelet/node-cli/manager"
 	"github.com/virtual-kubelet/node-cli/provider"
+	"github.com/virtual-kubelet/systemk/pkg/manager"
+	"github.com/virtual-kubelet/systemk/pkg/packages"
+	"github.com/virtual-kubelet/systemk/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 )
 
