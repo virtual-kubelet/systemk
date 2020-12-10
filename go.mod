@@ -1,4 +1,4 @@
-module github.com/miekg/vks
+module github.com/miekg/systemk
 
 go 1.15
 

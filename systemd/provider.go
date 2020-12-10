@@ -5,16 +5,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/miekg/vks/pkg/manager"
-	"github.com/miekg/vks/pkg/packages"
-	"github.com/miekg/vks/pkg/system"
+	"github.com/miekg/systemk/pkg/manager"
+	"github.com/miekg/systemk/pkg/packages"
+	"github.com/miekg/systemk/pkg/system"
 	vkmanager "github.com/virtual-kubelet/node-cli/manager"
 	"github.com/virtual-kubelet/node-cli/provider"
 	corev1 "k8s.io/api/core/v1"
 )
 
-// unitDir is where vks stores the modified unit files.
-var unitDir = "/var/run/vks"
+// unitDir is where systemk stores the modified unit files.
+var unitDir = "/var/run/systemk"
 
 // P is a systemd provider.
 type P struct {

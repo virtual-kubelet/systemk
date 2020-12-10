@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/andreyvit/diff"
-	"github.com/miekg/vks/pkg/manager"
-	"github.com/miekg/vks/pkg/packages"
+	"github.com/miekg/systemk/pkg/manager"
+	"github.com/miekg/systemk/pkg/packages"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 )

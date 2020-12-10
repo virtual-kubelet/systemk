@@ -136,7 +136,7 @@ const (
 	ServiceSuffix = ".service"
 )
 
-// State encodes the current state of a unit loaded into a vks agent
+// State encodes the current state of a unit loaded into a systemk agent
 type State struct {
 	dbus.UnitStatus
 	UnitData string // the unit file as written to disk

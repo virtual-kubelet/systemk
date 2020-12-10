@@ -26,7 +26,7 @@ import (
 	"sync"
 
 	"github.com/miekg/go-systemd/dbus"
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/unit"
 )
 
 // UnitManager manages units via a dBus connection to systemd.
@@ -191,7 +191,7 @@ func (m *UnitManager) Unit(name string) string {
 // this manager's units directory.
 func (m *UnitManager) Units() ([]string, error) { return lsUnitsDir(m.unitsDir) }
 
-// States return all units the have the prefix "vks."
+// States return all units the have the prefix "systemk."
 func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 	dbusStatuses, err := m.systemd.ListUnits()
 	if err != nil {

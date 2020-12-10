@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/unit"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -338,7 +338,7 @@ func Namespace(name string) string {
 
 const (
 	// Prefix the unit file prefix we used.
-	Prefix    = "vks"
+	Prefix    = "systemk"
 	separator = "."
 )
 

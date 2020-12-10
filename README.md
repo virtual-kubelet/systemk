@@ -13,7 +13,7 @@ _does_ imply networking and discovery (i.e.) DNS is already working on the syste
 deploying this. How to get a system into a state it has, and can run, k3s and virtual-kubelet is an
 open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
 
-`vks` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd
+`systemk` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd
 has. This allows use to set resources limit in the future by just specifying those in the
 unit file. Generally there is no isolation in this setup - although for disk access things
 are fairly contained, i.e. /var/secrets/kubernets.io/token will be bind mounted into the unit.
@@ -22,12 +22,12 @@ You basically use the k8s control plane to start linux processes. There is also 
 allocated to the PODs specially, you are using the host's networking.
 
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
-installed package is no longer used is hard, so this will not be done. `vks` will reuse the unit
+installed package is no longer used is hard, so this will not be done. `systemk` will reuse the unit
 file that comes from this install. However some other data is inject into it to make it work fully
-for vks. If there isn't an unit file (e.g. you use `bash` as the image), a unit file will be
+for systemk. If there isn't an unit file (e.g. you use `bash` as the image), a unit file will be
 synthesized.
 
-Each scheduled unit will adhere to a naming scheme so `vks` knows which ones are managed by it.
+Each scheduled unit will adhere to a naming scheme so `systemk` knows which ones are managed by it.
 
 ## Is This Useful?
 
@@ -41,10 +41,10 @@ Monitoring only requires prometheus to discover the pods via the Kubenetes API, 
 that particular setup.
 
 I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt-get upgrade, fiddle
-with config files etc. It may turn of that k3s + vks is a better way of handling even *2* machines.
+with config files etc. It may turn of that k3s + systemk is a better way of handling even *2* machines.
 
 Note that getting to the stage where this all runs, is secured and everything has the correct TLS
-certs (that are also rotated) is an open question. See https://github.com/miekg/vks/issues/39 for
+certs (that are also rotated) is an open question. See https://github.com/miekg/systemk/issues/39 for
 some ideas there.
 
 ## Current Status
@@ -66,14 +66,14 @@ Has been tested on
 
 ## Building
 
-Use `go build` in the top level directory, this should give you a `vks` binary which is the virtual
+Use `go build` in the top level directory, this should give you a `systemk` binary which is the virtual
 kubelet.
 
 ## Design
 
 Pods can contain multiple containers; each container is a new unit and tracked by systemd. The named
 image is assumed to be a *package* and will be installed via the normal means (`apt-get`, etc.). If
-vks is installing the package the official system unit will be disabled; if the package already
+systemk is installing the package the official system unit will be disabled; if the package already
 exists we leave the existing unit alone. If the install doesn't come with a unit file (say you
 install `zsh`) we will synthesize a small service unit file; for this to work the podSpec need to
 (at) least define a command to run.
@@ -87,13 +87,13 @@ string up until the `_` in the debian package name:
 `coredns` will be the package name.
 
 When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
-unit will be named `vks.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
+unit will be named `systemk.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
 will replace the first word of `ExecStart` and leave any options there. If `args` are also given
 the entire `ExecStart` is replaced with those. If only `args` are given the command will remain and
 only the options/args will be replaced.
 
 We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
-know a pod state vks will query systemd and read the unit file back. This way we know the status and
+know a pod state systemk will query systemd and read the unit file back. This way we know the status and
 have access to all the meta data.
 
 ### Limitations
@@ -107,10 +107,10 @@ Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use t
 script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script starts k3s with basically
 *everything* disabled.
 
-Compile `vks` and start it with.
+Compile `systemk` and start it with.
 
 ~~~
-sudo ./vks --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --enable-node-lease --disable-taint
+sudo ./systemk --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --enable-node-lease --disable-taint
 ~~~
 
 We need root to be allowed to install packages. Now a `k3s kubcetl get nodes` should show the
@@ -124,7 +124,7 @@ draak   Ready    agent   6s    v1.18.4   <none>        <none>        Ubuntu 20.0
 `draak` is my machine's name. You can now try to schedule a pod: `k3s/kubelet apply -f
 k3s/uptimed.yaml`.
 
-Logging works, but due to TLS, is a bit fiddly, you need to start `vks` with --certfile and
+Logging works, but due to TLS, is a bit fiddly, you need to start `systemk` with --certfile and
 --keyfile to make the HTTPS endpoint happy (enough). Once that's done you can get the logs with:
 
 ~~~
@@ -133,11 +133,11 @@ Logging works, but due to TLS, is a bit fiddly, you need to start `vks` with --c
 nov 19 12:12:27 draak systemd[1]: Started uptime record daemon.
 nov 19 12:14:44 draak uptimed[15245]: uptimed: no useable database found.
 nov 19 12:14:44 draak systemd[1]: Stopping uptime record daemon...
-nov 19 12:14:44 draak systemd[1]: vks.default.uptimed.uptimed.service: Succeeded.
+nov 19 12:14:44 draak systemd[1]: systemk.default.uptimed.uptimed.service: Succeeded.
 nov 19 12:14:44 draak systemd[1]: Stopped uptime record daemon.
 nov 19 13:38:54 draak systemd[1]: Started uptime record daemon.
 nov 19 13:39:26 draak systemd[1]: Stopping uptime record daemon...
-nov 19 13:39:26 draak systemd[1]: vks.default.uptimed.uptimed.service: Succeeded.
+nov 19 13:39:26 draak systemd[1]: systemk.default.uptimed.uptimed.service: Succeeded.
 ~~~
 
 ## Playing With It

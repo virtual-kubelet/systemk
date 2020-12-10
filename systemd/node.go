@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/miekg/vks/pkg/system"
+	"github.com/miekg/systemk/pkg/system"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

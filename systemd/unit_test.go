@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/miekg/vks/pkg/system"
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/system"
+	"github.com/miekg/systemk/pkg/unit"
 	"github.com/virtual-kubelet/node-cli/provider"
 )
 
@@ -48,7 +48,7 @@ func TestNewUnit(t *testing.T) {
 	}
 
 	/* requires root access
-	if err := p.m.Load("vks-openssh-server.service", *uf); err != nil {
+	if err := p.m.Load("systemk-openssh-server.service", *uf); err != nil {
 		t.Fatal(err)
 	}
 	*/

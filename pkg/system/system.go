@@ -42,7 +42,7 @@ func CPU() string {
 // Hostname returns the machine's host name.
 // if the environment variabe HOSTNAME is present this takes precedence.
 func Hostname() string {
-	// there is also a flag for this to vks ? use that instead?
+	// there is also a flag for this to systemk ? use that instead?
 	if h := os.Getenv("HOSTNAME"); h != "" {
 		return h
 	}

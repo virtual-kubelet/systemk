@@ -1,6 +1,6 @@
 [Unit]
-Description=vks
-Documentation=man:vks(8)
+Description=systemk
+Documentation=man:systemk(8)
 
 [Install]
 WantedBy=multi-user.target
@@ -25,8 +25,8 @@ Namespace=default
 ClusterName=
 Id=aa-bb
 [Unit]
-Description=vks
-Documentation=man:vks(8)
+Description=systemk
+Documentation=man:systemk(8)
 
 [Install]
 WantedBy=multi-user.target

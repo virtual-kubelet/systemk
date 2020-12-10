@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/unit"
 )
 
 // ArchlinuxPackageManager implemtents the PackageManager interface for an Archlinux system

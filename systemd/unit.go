@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/miekg/vks/pkg/system"
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/system"
+	"github.com/miekg/systemk/pkg/unit"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -274,8 +274,8 @@ func unitNames(units map[string]*unit.State) []string {
 }
 
 const synthUnit = `[Unit]
-Description=vks
-Documentation=man:vks(8)
+Description=systemk
+Documentation=man:systemk(8)
 
 [Service]
 ExecStart=need to be overwritten

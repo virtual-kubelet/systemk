@@ -12,7 +12,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/miekg/vks/pkg/unit"
+	"github.com/miekg/systemk/pkg/unit"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system

@@ -1,6 +1,6 @@
 package manager
 
-import "github.com/miekg/vks/pkg/unit"
+import "github.com/miekg/systemk/pkg/unit"
 
 // Manager manages systemd units.
 type Manager interface {
