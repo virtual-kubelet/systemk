@@ -72,7 +72,12 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	uid, gid := UidGidFromSecurityContext(pod)
 	tmp := []string{"/var", "/run"}
 
-	for _, c := range pod.Spec.Containers {
+	unitsToStart := []string{}
+	previousUnit := ""
+	for i, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
+		isInit := i < len(pod.Spec.InitContainers)
+		log.Printf("Processing container %d (init=%t)", i, isInit)
+
 		bindmounts := []string{}
 		bindmountsro := []string{}
 		rwpaths := []string{} // everything is RO, this will enable to pod to write to specific dirs.
@@ -140,9 +145,11 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
+		name := PodToUnitName(pod, c.Name)
 		if installed {
 			p.m.Mask(c.Image + unit.ServiceSuffix)
 		}
+
 
 		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {
@@ -165,14 +172,25 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			uf = uf.Overwrite("Service", "Group", gid)
 		}
 
+		switch isInit {
+		case true:
+			uf = uf.Overwrite("Service", "Type", "oneshot") // no restarting
+			uf = uf.Insert(kubernetesSection, "InitContainer", "true")
+			if previousUnit != "" {
+				uf = uf.Insert("Unit", "After", previousUnit)
+			}
+		case false:
+			if previousUnit != "" {
+				uf = uf.Insert("Unit", "After", previousUnit)
+			}
+		}
+
 		// keep the unit around, the control plane where clear it with a DeletePod.
 		// this is also for us to return the state even after the unit left the stage.
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
 		execStart := commandAndArgs(uf, c)
 		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStart, " "))
-
-		name := PodToUnitName(pod, c.Name)
 
 		id := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
 		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)
@@ -201,15 +219,23 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		for _, env := range p.defaultEnvironment() {
 			uf = uf.Insert("Service", "Environment", env)
 		}
-
-		log.Printf("Starting unit %s, %s as %s\n%s", c.Name, c.Image, name, uf)
+		init := ""
+		if isInit {
+			init = "init-"
+		}
+		log.Printf("Loading %sunit %s, %s as %s\n%s", init, c.Name, c.Image, name, uf)
 		if err := p.m.Load(name, *uf); err != nil {
 			log.Printf("Failed to load unit: %s", err)
-			return err
 		}
+		unitsToStart = append(unitsToStart, name)
+		if isInit {
+			previousUnit = name
+		}
+	}
+	for _, name := range unitsToStart {
+		log.Printf("Starting unit %q", name)
 		if err := p.m.TriggerStart(name); err != nil {
-			log.Printf("Failed to trigger start: %s", err)
-			return err
+			log.Printf("Failed to trigger start for unit %q: %s", name, err)
 		}
 	}
 	return nil
@@ -257,7 +283,7 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 // DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("DeletePod called")
-	for _, c := range pod.Spec.Containers {
+	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		name := PodToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
 			log.Printf("Failed to triggger top: %s", err)

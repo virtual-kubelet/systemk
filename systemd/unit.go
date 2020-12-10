@@ -35,7 +35,7 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	}
 
 	if _, ok := uf.Contents[kubernetesSection]; !ok {
-		log.Printf("Unit %q did not container %s section", name, kubernetesSection)
+		log.Printf("Unit %q did not contain %s section", name, kubernetesSection)
 		// delete it
 		if err := p.m.TriggerStop(name); err != nil {
 			log.Printf("Failed to triggger top: %s", err)
@@ -55,8 +55,8 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 		UID:         types.UID((uf.Contents[kubernetesSection]["Id"])[0]),
 	}
 
-	containers := p.toContainers(stats)
-	containerStatuses := p.toContainerStatuses(stats)
+	containers, initContainers := p.toContainers(stats)
+	containerStatuses, initContainerStatuses := p.toContainerStatuses(stats)
 	starttime := metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(name, "ExecMainStartTimestampMonotonic")))
 
 	pod := &corev1.Pod{
@@ -66,9 +66,10 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 		},
 		ObjectMeta: om,
 		Spec: corev1.PodSpec{
-			NodeName:   system.Hostname(),
-			Volumes:    []corev1.Volume{},
-			Containers: containers,
+			NodeName:       system.Hostname(),
+			Volumes:        []corev1.Volume{},
+			Containers:     containers,
+			InitContainers: initContainers,
 		},
 
 		Status: corev1.PodStatus{
@@ -90,7 +91,8 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 					LastTransitionTime: starttime,
 				},
 			},
-			ContainerStatuses: containerStatuses,
+			ContainerStatuses:     containerStatuses,
+			InitContainerStatuses: initContainerStatuses,
 
 			Message:   string(toPhase(containerStatuses)),
 			Reason:    "",
@@ -102,14 +104,17 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	return pod
 }
 
-func (p *P) toContainers(stats map[string]*unit.State) []corev1.Container {
+func (p *P) toContainers(stats map[string]*unit.State) ([]corev1.Container, []corev1.Container) {
 	keys := unitNames(stats)
-	containers := make([]v1.Container, 0, len(stats))
+	containers := []v1.Container{}
+	initContainers := []v1.Container{}
 	for _, k := range keys {
+		s := stats[k]
+		u, _ := unit.New(s.UnitData)
 		container := v1.Container{
 			Name:      Image(k),
-			Image:     Image(k),            // We not saving the image anywhere, this assume container.Name == container.Image
-			Command:   []string{"/bin/sh"}, // parse from unit file?
+			Image:     Image(k), // We not saving the image anywhere, this assume container.Name == container.Image
+			Command:   u.Contents["Service"]["ExecStart"],
 			Resources: v1.ResourceRequirements{
 				/*
 					Limits: v1.ResourceList{
@@ -124,16 +129,22 @@ func (p *P) toContainers(stats map[string]*unit.State) []corev1.Container {
 				*/
 			},
 		}
+		if u.Contents[kubernetesSection]["InitContainer"] != nil {
+			initContainers = append(initContainers, container)
+			continue
+		}
 		containers = append(containers, container)
 	}
-	return containers
+	return containers, initContainers
 }
 
-func (p *P) toContainerStatuses(stats map[string]*unit.State) []corev1.ContainerStatus {
+func (p *P) toContainerStatuses(stats map[string]*unit.State) ([]corev1.ContainerStatus, []corev1.ContainerStatus) {
 	keys := unitNames(stats)
-	statuses := make([]v1.ContainerStatus, 0, len(stats))
+	statuses := []v1.ContainerStatus{}
+	initStatuses := []v1.ContainerStatus{}
 	for _, k := range keys {
 		s := stats[k]
+		u, _ := unit.New(s.UnitData)
 		restarts, _ := strconv.Atoi(p.m.ServiceProperty(k, "NRestarts"))
 		status := v1.ContainerStatus{
 			Name:                 Name(k),
@@ -145,9 +156,13 @@ func (p *P) toContainerStatuses(stats map[string]*unit.State) []corev1.Container
 			ImageID:              hash(Image(k)),
 			ContainerID:          "pid://" + p.m.ServiceProperty(k, "MainPID"),
 		}
+		if u.Contents[kubernetesSection]["InitContainer"] != nil {
+			initStatuses = append(initStatuses, status)
+			continue
+		}
 		statuses = append(statuses, status)
 	}
-	return statuses
+	return statuses, initStatuses
 }
 
 func (p *P) containerState(u *unit.State) v1.ContainerState {
@@ -156,7 +171,7 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 	switch {
 	case strings.HasPrefix(u.SubState, "stop"):
 		fallthrough
-	case u.SubState == "failed" || u.SubState == "exited" || u.SubState == "dead":
+	case u.SubState == "failed" || u.SubState == "exited":
 		exitcode := int32(propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainStatus")))
 		reason := string(corev1.PodFailed)
 		if exitcode == 0 {
@@ -172,7 +187,26 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 				ContainerID: "pid://" + p.m.ServiceProperty(u.Name, "MainPID"),
 			},
 		}
-
+	case u.SubState == "dead": // either ran, or waiting to be run
+		exitStamp := propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))
+		if exitStamp > 0 {
+			exitcode := int32(propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainStatus")))
+			reason := string(corev1.PodFailed)
+			if exitcode == 0 {
+				reason = string(corev1.PodSucceeded)
+			}
+			return v1.ContainerState{
+				Terminated: &v1.ContainerStateTerminated{
+					ExitCode:    exitcode,
+					Reason:      reason,
+					Message:     reason,
+					StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
+					FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))),
+					ContainerID: "pid://" + p.m.ServiceProperty(u.Name, "MainPID"),
+				},
+			}
+		}
+		fallthrough // fall to condition waiting
 	case strings.HasPrefix(u.SubState, "start"):
 		fallthrough
 	case u.SubState == "condition":

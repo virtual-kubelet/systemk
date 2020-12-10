@@ -7,6 +7,11 @@ metadata:
 spec:
   securityContext:
     runAsUser: 1 # 'daemon' on debian YMMV
+  initContainers:
+  - name: init-uptimed
+    image: bash
+    command: ["bash", "-c"]
+    args: ["sleep 10"]
   containers:
   - name: uptimed
     image: uptimed
