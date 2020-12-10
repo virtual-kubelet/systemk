@@ -3,7 +3,7 @@ package systemd
 import (
 	"fmt"
 
-	"github.com/miekg/systemk/pkg/system"
+	"github.com/virtual-kubelet/systemk/pkg/system"
 )
 
 // defaultEnvironment returns the environment that the kubelet uses.

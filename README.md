@@ -44,7 +44,7 @@ I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt
 with config files etc. It may turn of that k3s + systemk is a better way of handling even *2* machines.
 
 Note that getting to the stage where this all runs, is secured and everything has the correct TLS
-certs (that are also rotated) is an open question. See https://github.com/miekg/systemk/issues/39 for
+certs (that are also rotated) is an open question. See https://github.com/virtual-kubelet/systemk/issues/39 for
 some ideas there.
 
 ## Current Status

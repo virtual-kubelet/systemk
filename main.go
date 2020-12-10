@@ -22,12 +22,12 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/miekg/systemk/pkg/system"
-	"github.com/miekg/systemk/systemd"
 	"github.com/spf13/pflag"
 	cli "github.com/virtual-kubelet/node-cli"
 	"github.com/virtual-kubelet/node-cli/opts"
 	"github.com/virtual-kubelet/node-cli/provider"
+	"github.com/virtual-kubelet/systemk/pkg/system"
+	"github.com/virtual-kubelet/systemk/systemd"
 )
 
 var (

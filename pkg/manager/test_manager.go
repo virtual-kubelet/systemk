@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"github.com/miekg/systemk/pkg/unit"
+	"github.com/virtual-kubelet/systemk/pkg/unit"
 )
 
 // TestManager is a manager used for testing.

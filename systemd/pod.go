@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/miekg/systemk/pkg/unit"
+	"github.com/virtual-kubelet/systemk/pkg/unit"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -149,7 +149,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if installed {
 			p.m.Mask(c.Image + unit.ServiceSuffix)
 		}
-
 
 		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
 		if err != nil {
