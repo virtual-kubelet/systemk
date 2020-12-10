@@ -1,11 +1,12 @@
-# Virtual Kubelet for systemd
+# Systemk: virtual kubelet for systemd
 
-This is an virtual kubelet provider that interacts with systemd. The aim is to make this to work
+This is a virtual kubelet provider that uses systemd as its backend. The aim is to make this to work
 with [K3s](https://github.com/rancher/k3s/) and go from there.
 
 Every Linux system has systemd nowadays. By utilizing K3s (just one Go binary) and this virtual
 kubelet you can provision a system using the Kubernetes API. The networking is the host's network,
-so it make sense to use this for more heavy weight (stateful?) applications.
+so it make sense to use this for more heavy weight (stateful?) applications. The filesystem is semi
+hidden, but emptyDir and the like works.
 
 It is hoped this setup allows you to use the Kubernetes API without the need to immerse yourself in
 the (large) world of kubernetes (overlay networking, ingress objects, etc., etc.). However this
@@ -13,10 +14,11 @@ _does_ imply networking and discovery (i.e.) DNS is already working on the syste
 deploying this. How to get a system into a state it has, and can run, k3s and virtual-kubelet is an
 open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
 
-`systemk` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd
-has. This allows use to set resources limit in the future by just specifying those in the
-unit file. Generally there is no isolation in this setup - although for disk access things
-are fairly contained, i.e. /var/secrets/kubernets.io/token will be bind mounted into the unit.
+`systemk` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd has.
+This allows us to set resource limits, by just specifying those in the unit file (copy paste from
+the podSpec). Generally there is no (container) isolation in this setup - although for disk access
+things are fairly contained, i.e. /var/secrets/kubernets.io/token will be bind mounted into each
+unit, and will be shared across units in a pod.
 
 You basically use the k8s control plane to start linux processes. There is also no address space
 allocated to the PODs specially, you are using the host's networking.
@@ -44,13 +46,14 @@ I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt
 with config files etc. It may turn of that k3s + systemk is a better way of handling even *2* machines.
 
 Note that getting to the stage where this all runs, is secured and everything has the correct TLS
-certs (that are also rotated) is an open question. See https://github.com/virtual-kubelet/systemk/issues/39 for
+certs (that are also rotated) is an open question. See https://github.com/miekg/systemk/issues/39 for
 some ideas there.
 
 ## Current Status
 
 Multiple containers in a pod can be run and they can see each others storage. Creating, deleting,
-inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too.
+inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too. Init
+Containers are implemented.
 
 EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
 bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
@@ -59,7 +62,7 @@ are read-only or read-write depending on settings.
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
 being generated.
 
-Has been tested on
+Has been tested on:
 
 * ubuntu 20.04 and 18.04
 * arch (maybe?)
@@ -86,15 +89,15 @@ string up until the `_` in the debian package name:
 `deb://example.org/tmp/coredns_1.7.1-bla_amd64.deb` will download the package from that URL and
 `coredns` will be the package name.
 
-When we see a CreatePod call we call out to systemd to create a unit per container in the pod. Each
-unit will be named `systemk.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it
-will replace the first word of `ExecStart` and leave any options there. If `args` are also given
-the entire `ExecStart` is replaced with those. If only `args` are given the command will remain and
-only the options/args will be replaced.
+CreatePod call we call out to systemd to create a unit per container in the pod. Each unit will
+be named `systemk.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it will
+replace the first word of `ExecStart` and leave any options there. If `args` are also given the
+entire `ExecStart` is replaced with those. If only `args` are given the command will remain and only
+the options/args will be replaced.
 
 We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
-know a pod state systemk will query systemd and read the unit file back. This way we know the status and
-have access to all the meta data.
+know a pod state systemk will query systemd and read the unit file back. This way we know the status
+and have access to all the meta data, like pod UID and if the unit is an init container.
 
 ### Limitations
 
@@ -140,7 +143,14 @@ nov 19 13:39:26 draak systemd[1]: Stopping uptime record daemon...
 nov 19 13:39:26 draak systemd[1]: systemk.default.uptimed.uptimed.service: Succeeded.
 ~~~
 
-## Playing With It
+### Prometheus discovery targets to Scrape
+
+The includes manifests `k3s/prometheus.yaml` and `k3s/uptimed.yaml` install a prometheus with k8s
+support and the uptimed. This allows prom to find the open ports for uptimed and will start scraping
+those for metrics (uptimed doesn't have metrics, but that's a minor detail). Here is the status of
+prom finding those targets and trying to scrape:
+
+![Prometheus running as systemd unit finding targets](img/prom.jpeg)
 
 ### Debian/Ubuntu
 
