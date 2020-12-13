@@ -55,6 +55,8 @@ func New(cfg provider.InitConfig) (*P, error) {
 
 	case "arch":
 		p.pkg = new(packages.ArchlinuxPackageManager)
+	case "noop":
+		p.pkg = new(packages.NoopPackageManager)
 	}
 
 	p.rm = cfg.ResourceManager
