@@ -10,6 +10,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const(
+	defaultOS="Linux"
+)
+
 // ConfigureNode enables a provider to configure the node object that will be used for Kubernetes.
 func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Capacity = p.capacity()
@@ -17,7 +21,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Conditions = p.nodeConditions()
 	node.Status.Addresses = p.nodeAddresses()
 	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
-	node.Status.NodeInfo.OperatingSystem = "Linux"
+	node.Status.NodeInfo.OperatingSystem = defaultOS
 	node.Status.NodeInfo.KernelVersion = system.Kernel()
 	node.Status.NodeInfo.OSImage = system.Image()
 	node.Status.NodeInfo.ContainerRuntimeVersion = system.Version()
@@ -25,7 +29,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 		Name: system.Hostname(),
 		Labels: map[string]string{
 			"type":                              "virtual-kubelet",
-			"kubernetes.io/role":                "agent",
+			"kubernetes.io/os":                  defaultOS,
 			"kubernetes.io/hostname":            system.Hostname(),
 			corev1.LabelZoneFailureDomainStable: "localhost",
 			corev1.LabelZoneRegionStable:        system.Hostname(),
