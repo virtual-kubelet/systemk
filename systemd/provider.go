@@ -2,7 +2,6 @@ package systemd
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	vkmanager "github.com/virtual-kubelet/node-cli/manager"
@@ -11,6 +10,7 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 // unitDir is where systemk stores the modified unit files.
@@ -44,13 +44,13 @@ func New(cfg provider.InitConfig) (*P, error) {
 		p.pkg = new(packages.DebianPackageManager)
 
 		// Just installed pre-requisites instead of pointing to the docs.
-		log.Printf("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
+		klog.Infof("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
 		err, ok := p.pkg.Install("policyrcd-script-zg2", "")
 		if err != nil {
-			log.Printf("Failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
+			klog.Warningf("Failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
 		}
 		if ok {
-			log.Printf("%s is already installed", "policyrcd-script-zg2")
+			klog.Infof("%s is already installed", "policyrcd-script-zg2")
 		}
 
 	case "arch":

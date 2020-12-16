@@ -3,7 +3,6 @@ package systemd
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,7 +52,7 @@ func testPodSpecUnit(t *testing.T, p *P, base string) {
 	d := scheme.Codecs.UniversalDeserializer()
 	obj, _, err := d.Decode(podSpec, nil, nil)
 	if err != nil {
-		log.Fatalf("could not decode yaml %q: %s", yamlFile, err)
+		t.Fatalf("could not decode yaml %q: %s", yamlFile, err)
 	}
 	unitFile := filepath.Join(dir, base+".units")
 	unit, _ := ioutil.ReadFile(unitFile)

@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"io/ioutil"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/klog/v2"
 )
 
 func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
@@ -31,17 +31,17 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	}
 	uf, err := unit.New(stats[name].UnitData)
 	if err != nil {
-		log.Printf("error while parsing unit file %s", err)
+		klog.Infof("error while parsing unit file %s", err)
 	}
 
 	if _, ok := uf.Contents[kubernetesSection]; !ok {
-		log.Printf("Unit %q did not contain %s section", name, kubernetesSection)
+		klog.Warningf("Unit %q did not contain %s section", name, kubernetesSection)
 		// delete it
 		if err := p.m.TriggerStop(name); err != nil {
-			log.Printf("Failed to triggger top: %s", err)
+			klog.Warningf("Failed to triggger top: %s", err)
 		}
 		if err := p.m.Unload(name); err != nil {
-			log.Printf("Failed to unload: %s", err)
+			klog.Warningf("Failed to unload: %s", err)
 		}
 		p.m.Reload()
 		return nil
@@ -224,7 +224,7 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 		}
 
 	default:
-		log.Printf("Unhandled substate for %q: %s", u.Name, u.SubState)
+		klog.Warningf("Unhandled substate for %q: %s", u.Name, u.SubState)
 		return v1.ContainerState{}
 	}
 }
@@ -287,12 +287,12 @@ WantedBy=multi-user.target
 func (p *P) unitfileFromPackageOrSynthesized(c corev1.Container, installed bool) (*unit.File, error) {
 	u, err := p.pkg.Unitfile(c.Image)
 	if err != nil {
-		log.Printf("Failed to find unit file: %s. Synthesizing one", err)
+		klog.Warningf("Failed to find unit file: %s. Synthesizing one", err)
 		uf, err := unit.New(synthUnit)
 		return uf, err
 	}
 
-	log.Printf("Unit file found at %q", u)
+	klog.Infof("Unit file found at %q", u)
 	buf, err := ioutil.ReadFile(u)
 	if err != nil {
 		return nil, err

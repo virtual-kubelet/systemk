@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"k8s.io/klog/v2"
 )
 
 // fetch fetches a package from the URL pointed at in pkg. The URL must be given without a packager
@@ -17,7 +18,7 @@ func fetch(pkg, version string) (string, error) {
 	c.Timeout = 240 * time.Second
 
 	pkg = "https://" + pkg
-	log.Printf("Fetching from %s", pkg)
+	klog.Infof("Fetching from %s", pkg)
 	resp, err := c.Get(pkg)
 	if err != nil {
 		return "", err
