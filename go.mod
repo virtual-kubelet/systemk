@@ -6,13 +6,13 @@ require (
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/gorilla/mux v1.7.3
 	github.com/miekg/go-systemd v0.0.0-20201113131452-5b28b7ed4aa7
-	github.com/miekg/systemk v0.0.0-20201210082402-0462b715595a
 	github.com/spf13/pflag v1.0.5
 	github.com/virtual-kubelet/node-cli v0.3.1
 	github.com/virtual-kubelet/virtual-kubelet v1.3.0
 	k8s.io/api v0.18.4
 	k8s.io/apimachinery v0.18.4
 	k8s.io/client-go v0.18.4
+	k8s.io/klog/v2 v2.4.0
 )
 
 replace (

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -13,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/virtual-kubelet/systemk/pkg/unit"
+	"k8s.io/klog/v2"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system
@@ -27,7 +27,7 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
-	log.Printf("Checking if %q is installed", p.Clean(pkg))
+	klog.Infof("Checking if %q is installed", p.Clean(pkg))
 	checkCmd := exec.Command(dpkgCommand, "-s", p.Clean(pkg))
 	if err := checkCmd.Run(); err == nil {
 		return nil, false
@@ -62,7 +62,7 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 		installCmd.Env = append(installCmd.Env, env+"="+os.Getenv(env))
 	}
 
-	log.Printf("Running %s", installCmd)
+	klog.Infof("Running %s", installCmd)
 	if out, err := installCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to install: %s\n%s", err, out), false
 	}

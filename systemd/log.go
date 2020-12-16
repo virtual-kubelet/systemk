@@ -3,12 +3,12 @@ package systemd
 import (
 	"context"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	"k8s.io/klog/v2"
 )
 
 func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.TODO()
 	logs, err := p.GetContainerLogs(ctx, namespace, pod, container, opts)
 	if err != nil {
-		log.Println(err)
+		klog.Info(err)
 		io.WriteString(w, err.Error())
 		return
 	}
@@ -46,6 +46,6 @@ func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *P) NotFound(w http.ResponseWriter, _ *http.Request) {
-	log.Println(http.StatusText(http.StatusNotFound))
+	klog.Info(http.StatusText(http.StatusNotFound))
 	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 }

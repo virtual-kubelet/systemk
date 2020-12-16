@@ -2,7 +2,6 @@ package systemd
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 
@@ -21,7 +20,7 @@ func TestNewUnit(t *testing.T) {
 
 	dir, err := ioutil.TempDir(".", "units")
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // clean up
 	unitDir = dir

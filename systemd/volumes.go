@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
 )
 
 // Where this files life is still an open question, right now we bind mount everything into place.
@@ -29,7 +29,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 	id := string(pod.ObjectMeta.UID)
 	uid, gid := UidGidFromSecurityContext(pod)
 	for i, v := range pod.Spec.Volumes {
-		log.Printf("Looking at volume %q#%d", v.Name, i)
+		klog.Infof("Looking at volume %q#%d", v.Name, i)
 		switch {
 		case v.HostPath != nil:
 			vol[v.Name] = ""
@@ -45,7 +45,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				return nil, err
 			}
 
-			log.Printf("Created %q for emptyDir: %s", dir, v.Name)
+			klog.Infof("Created %q for emptyDir: %s", dir, v.Name)
 			vol[v.Name] = dir
 
 		case v.Secret != nil:
@@ -67,12 +67,12 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				return nil, err
 			}
 
-			log.Printf("Created %q for secret: %s", dir, v.Name)
+			klog.Infof("Created %q for secret: %s", dir, v.Name)
 
 			for k, v := range secret.StringData {
 				path := filepath.Join(dir, k)
 
-				log.Printf("Writing secret to path %q", path)
+				klog.Infof("Writing secret to path %q", path)
 				data, err := base64.StdEncoding.DecodeString(string(v))
 				if err != nil {
 					return vol, err
@@ -84,7 +84,7 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 			for k, v := range secret.Data {
 				path := filepath.Join(dir, k)
 
-				log.Printf("Writing secret to path %q", path)
+				klog.Infof("Writing secret to path %q", path)
 				err := ioutil.WriteFile(path, []byte(v), 0640)
 				if err != nil {
 					return vol, err
@@ -111,18 +111,18 @@ func (p *P) volumes(pod *corev1.Pod) (map[string]string, error) {
 				return nil, err
 			}
 
-			log.Printf("Created %q for configmap: %s", dir, v.Name)
+			klog.Infof("Created %q for configmap: %s", dir, v.Name)
 
 			for k, v := range configMap.Data {
 				path := filepath.Join(dir, k)
-				log.Printf("Writing configMap Data to path %q", path)
+				klog.Infof("Writing configMap Data to path %q", path)
 				if err := ioutil.WriteFile(path, []byte(v), 0640); err != nil {
 					return vol, err
 				}
 			}
 			for k, v := range configMap.BinaryData {
 				path := filepath.Join(dir, k)
-				log.Printf("Writing configMap BinaryData to path %q", path)
+				klog.Infof("Writing configMap BinaryData to path %q", path)
 				err := ioutil.WriteFile(path, v, 0640)
 				if err != nil {
 					return vol, err

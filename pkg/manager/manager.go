@@ -19,7 +19,6 @@ package manager
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/miekg/go-systemd/dbus"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
+	"k8s.io/klog/v2"
 )
 
 // UnitManager manages units via a dBus connection to systemd.
@@ -95,7 +95,7 @@ func (m *UnitManager) TriggerStart(name string) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Triggered systemd unit %s start: job=%d", name, jobID)
+	klog.Infof("Triggered systemd unit %s start: job=%d", name, jobID)
 	return nil
 }
 
@@ -183,7 +183,7 @@ func (m *UnitManager) readUnit(name string) (string, error) {
 func (m *UnitManager) Reload() error { return m.systemd.Reload() }
 
 func (m *UnitManager) Unit(name string) string {
-	log.Printf("not implemented, used for testing")
+	klog.Info("not implemented, used for testing")
 	return ""
 }
 
@@ -197,7 +197,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%d statusses for prefix %q returned", len(dbusStatuses), prefix)
+	klog.Infof("%d statusses for prefix %q returned", len(dbusStatuses), prefix)
 
 	states := make(map[string]*unit.State)
 	for _, dus := range dbusStatuses {
@@ -215,14 +215,14 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 		states[dus.Name] = us
 	}
 
-	log.Printf("Left with %d statuses for prefix %q", len(states), prefix)
+	klog.Infof("Left with %d statuses for prefix %q", len(states), prefix)
 
 	return states, nil
 }
 
 func (m *UnitManager) writeUnit(name string, contents string) error {
 	bContents := []byte(contents)
-	log.Printf("Writing systemd unit %s (%db)", name, len(bContents))
+	klog.Info("Writing systemd unit %s (%db)", name, len(bContents))
 
 	ufPath := m.getUnitFilePath(name)
 	err := ioutil.WriteFile(ufPath, bContents, os.FileMode(0644))
@@ -235,7 +235,7 @@ func (m *UnitManager) writeUnit(name string, contents string) error {
 }
 
 func (m *UnitManager) enableUnit(name string) (bool, error) {
-	log.Printf("Enabling systemd unit %s", name)
+	klog.Infof("Enabling systemd unit %s", name)
 
 	ufPath := m.getUnitFilePath(name)
 
@@ -244,7 +244,7 @@ func (m *UnitManager) enableUnit(name string) (bool, error) {
 }
 
 func (m *UnitManager) removeUnit(name string) (err error) {
-	log.Printf("Removing systemd unit %s", name)
+	klog.Infof("Removing systemd unit %s", name)
 
 	// both DisableUnitFiles() and ResetFailedUnit() must be followed by
 	// removing the unit file. Otherwise "systemctl stop fleet" could end up hanging forever.
@@ -281,7 +281,7 @@ func (m *UnitManager) getUnitFilePath(name string) string {
 func lsUnitsDir(dir string) ([]string, error) {
 	filterFunc := func(name string) bool {
 		if !strings.HasSuffix(name, unit.ServiceSuffix) {
-			log.Printf("Found unrecognized file in %s, ignoring", path.Join(dir, name))
+			klog.Infof("Found unrecognized file in %s, ignoring", path.Join(dir, name))
 			return true
 		}
 

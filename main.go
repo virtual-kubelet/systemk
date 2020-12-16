@@ -17,7 +17,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/virtual-kubelet/node-cli/provider"
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/systemk/systemd"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -49,7 +49,7 @@ func main() {
 
 	o, err := opts.FromEnv()
 	if err != nil {
-		log.Fatal(err)
+		klog.Fatal(err)
 	}
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
@@ -66,7 +66,7 @@ func main() {
 				return p, err
 			}
 			if certFile == "" || keyFile == "" {
-				log.Printf("Not certificates found, disabling GetContainerLogs")
+				klog.Info("Not certificates found, disabling GetContainerLogs")
 				return p, nil
 			}
 
@@ -76,7 +76,7 @@ func main() {
 			go func() {
 				err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
 				if err != nil {
-					log.Fatal(err)
+					klog.Fatal(err)
 				}
 			}()
 			return p, nil
@@ -84,10 +84,10 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatal(err)
+		klog.Fatal(err)
 	}
 
 	if err := node.Run(ctx); err != nil {
-		log.Fatal(err)
+		klog.Fatal(err)
 	}
 }
