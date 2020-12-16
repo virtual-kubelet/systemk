@@ -83,9 +83,9 @@ func Image() string {
 	if j == 0 {
 		return ""
 	}
-	os = os[:j]
-	os = bytes.ReplaceAll(os, []byte("\""), []byte{})
-	return string(os[:len(os)-1]) // newline
+	// Some attributes are quoted, some are not. Cover both.
+	os = bytes.ReplaceAll(os[:j-1], []byte("\""), []byte{})
+	return string(os)
 }
 
 // Version returns the version of systemd.
@@ -117,7 +117,8 @@ func ID() string {
 	if j == 0 {
 		return ""
 	}
-	id = id[:j]
+	// Some attributes are quoted, some are not. Cover both.
+	id = bytes.ReplaceAll(id[:j], []byte("\""), []byte{})
 	return string(id)
 }
 
