@@ -11,6 +11,12 @@ import (
 	"syscall"
 )
 
+var (
+	// this is a variable so it can be overridden during unit-testing.
+	osReleaseFilePath = "/etc/os-release"
+
+)
+
 // Memory returns the amount of memory in the system.
 func Memory() string {
 	in := &syscall.Sysinfo_t{}
@@ -40,6 +46,7 @@ func CPU() string {
 }
 
 // Hostname returns the machine's host name.
+// if the environment variable HOSTNAME is present this takes precedence.
 // if the environment variabe HOSTNAME is present this takes precedence.
 func Hostname() string {
 	// there is also a flag for this to systemk ? use that instead?
@@ -63,7 +70,7 @@ func Kernel() string {
 
 // Image returns the systems image (PRETTY_NAME from /etc/os-release)
 func Image() string {
-	buf, err := ioutil.ReadFile("/etc/os-release")
+	buf, err := ioutil.ReadFile(osReleaseFilePath)
 	if err != nil {
 		return ""
 	}
@@ -76,9 +83,9 @@ func Image() string {
 	if j == 0 {
 		return ""
 	}
-	os = os[:j]
-	os = bytes.ReplaceAll(os, []byte("\""), []byte{})
-	return string(os[:len(os)-1]) // newline
+	// Some attributes are quoted, some are not. Cover both.
+	os = bytes.ReplaceAll(os[:j-1], []byte("\""), []byte{})
+	return string(os)
 }
 
 // Version returns the version of systemd.
@@ -97,7 +104,7 @@ func Version() string {
 
 // ID returns the ID of the system.
 func ID() string {
-	buf, err := ioutil.ReadFile("/etc/os-release")
+	buf, err := ioutil.ReadFile(osReleaseFilePath)
 	if err != nil {
 		return ""
 	}
@@ -110,7 +117,8 @@ func ID() string {
 	if j == 0 {
 		return ""
 	}
-	id = id[:j]
+	// Some attributes are quoted, some are not. Cover both.
+	id = bytes.ReplaceAll(id[:j], []byte("\""), []byte{})
 	return string(id)
 }
 
