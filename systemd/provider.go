@@ -9,6 +9,7 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/manager"
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/system"
+	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
@@ -21,6 +22,7 @@ type P struct {
 	m   manager.Manager
 	pkg packages.PackageManager
 	rm  *vkmanager.ResourceManager
+	w   *Watcher
 
 	Addresses     []corev1.NodeAddress
 	DaemonPort    int32
@@ -62,6 +64,23 @@ func New(cfg provider.InitConfig) (*P, error) {
 	p.rm = cfg.ResourceManager
 	p.DaemonPort = cfg.DaemonPort
 	p.ClusterDomain = cfg.KubeClusterDomain
+
+	if cfg.ConfigPath == "" {
+		return p, nil
+	}
+
+	clientset, err := nodeutil.ClientsetFromEnv(cfg.ConfigPath)
+	if err != nil {
+		return p, err
+	}
+	// Get new clientset.
+	w := newWatcher(clientset)
+	go func() {
+		if err := w.run(p); err != nil {
+			klog.Fatal(err)
+		}
+	}()
+	p.w = w
 	return p, nil
 }
 

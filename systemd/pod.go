@@ -64,7 +64,7 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	klog.Info("CreatedPod called")
 
-	vol, err := p.volumes(pod)
+	vol, err := p.volumes(pod, All)
 	if err != nil {
 		klog.Infof("Failed to setup volumes: %s", err)
 	}
@@ -237,6 +237,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			klog.Infof("Failed to trigger start for unit %q: %s", name, err)
 		}
 	}
+	p.w.Watch(pod)
 	return nil
 }
 
@@ -292,7 +293,18 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 	}
 	p.m.Reload()
+	p.w.Unwatch(pod)
 	return nil
+}
+
+func (p *P) UpdateConfigMap(ctx context.Context, pod *corev1.Pod, cm *corev1.ConfigMap) error {
+	_, err := p.volumes(pod, ConfigMap)
+	return err
+}
+
+func (p *P) UpdateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret) error {
+	_, err := p.volumes(pod, Secret)
+	return err
 }
 
 func PodToUnitName(pod *corev1.Pod, containerName string) string {

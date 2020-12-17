@@ -2,6 +2,7 @@ package systemd
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,10 +12,10 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/manager"
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/kubectl/pkg/scheme"
 )
 
-const dir = "testdata"
+const dir = "testdata/provider"
 
 func TestProviderPodSpecUnits(t *testing.T) {
 	testFiles, err := ioutil.ReadDir(dir)
@@ -44,26 +45,13 @@ func TestProviderPodSpecUnits(t *testing.T) {
 
 func testPodSpecUnit(t *testing.T, p *P, base string) {
 	yamlFile := filepath.Join(dir, base+".yaml")
-	podSpec, err := ioutil.ReadFile(yamlFile)
+	pod, err := podFromFile(yamlFile)
 	if err != nil {
-		t.Errorf("couldn't open %q, %s", yamlFile, err)
+		t.Error(err)
 		return
-	}
-	d := scheme.Codecs.UniversalDeserializer()
-	obj, _, err := d.Decode(podSpec, nil, nil)
-	if err != nil {
-		t.Fatalf("could not decode yaml %q: %s", yamlFile, err)
 	}
 	unitFile := filepath.Join(dir, base+".units")
 	unit, _ := ioutil.ReadFile(unitFile)
-
-	pod, ok := obj.(*corev1.Pod)
-	if !ok {
-		t.Errorf("%s is a not a podSpec", yamlFile)
-		return
-	}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.UID = "aa-bb"
 
 	if err := p.CreatePod(context.TODO(), pod); err != nil {
 		t.Errorf("failed to call CreatePod: %v", err)
@@ -79,4 +67,24 @@ func testPodSpecUnit(t *testing.T, p *P, base string) {
 	if got != string(unit) {
 		t.Errorf("got unexpected result: %s", diff.LineDiff(got, string(unit)))
 	}
+}
+
+func podFromFile(path string) (*corev1.Pod, error) {
+	podSpec, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't open %q, %s", path, err)
+	}
+	d := scheme.Codecs.UniversalDeserializer()
+	obj, _, err := d.Decode(podSpec, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode yaml %q: %s", path, err)
+	}
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil, fmt.Errorf("%s is a not a podSpec", path)
+	}
+	// Set these to a fixed value.
+	pod.ObjectMeta.Namespace = "default"
+	pod.ObjectMeta.UID = "aa-bb"
+	return pod, nil
 }

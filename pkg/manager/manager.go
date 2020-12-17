@@ -222,7 +222,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 
 func (m *UnitManager) writeUnit(name string, contents string) error {
 	bContents := []byte(contents)
-	klog.Info("Writing systemd unit %s (%db)", name, len(bContents))
+	klog.Infof("Writing systemd unit %s (%db)", name, len(bContents))
 
 	ufPath := m.getUnitFilePath(name)
 	err := ioutil.WriteFile(ufPath, bContents, os.FileMode(0644))
