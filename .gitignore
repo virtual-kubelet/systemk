@@ -1,0 +1,8 @@
+# IDE stuff
+.idea
+*.vim
+.vscode
+
+# binaries and other artifacts
+systemk
+vendor
