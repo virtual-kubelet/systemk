@@ -19,8 +19,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/miekg/go-systemd/dbus"
-	"github.com/miekg/go-systemd/unit"
+	"github.com/coreos/go-systemd/v22/dbus"
+	"github.com/coreos/go-systemd/v22/unit"
 )
 
 // New returns a new unit file parsed from raw.
