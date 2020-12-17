@@ -1,7 +1,6 @@
 name: Go
 on: [push, pull_request]
 jobs:
-
   build:
     name: Build and Test
     runs-on: ubuntu-latest
@@ -18,8 +17,21 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Virtual Kubelet Build
+    - name: Get dependencies
+      run: |
+        go get golang.org/x/lint/golint
+
+    - name: Check formatting
+      run: go fmt
+
+    - name: Vet
+      run: go vet
+
+    - name: Lint
+      run: golint ./... # for now don't set --set_exit_status so build passes
+
+    - name: systemk Build
       run: go build -v ./...
 
-    - name: Virtual Kubelet Test
+    - name: systemk Test (unit)
       run: go test -v ./...

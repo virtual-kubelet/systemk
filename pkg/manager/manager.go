@@ -24,7 +24,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/miekg/go-systemd/dbus"
+	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
 	"k8s.io/klog/v2"
 )
