@@ -17,12 +17,18 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
+    - name: Get dependencies
+      run: |
+        go get golang.org/x/lint/golint
 
     - name: Check formatting
       run: go fmt
 
     - name: Vet
       run: go vet
+
+    - name: Lint
+      run: golint ./... # for now don't set --set_exit_status so build passes
 
     - name: systemk Build
       run: go build -v ./...
