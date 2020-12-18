@@ -6,12 +6,12 @@ metadata:
     name: uptimed
 spec:
   securityContext:
-    runAsUser: 1 # 'daemon' on debian YMMV
+    runAsUser: 1
   initContainers:
   - name: init-uptimed
     image: bash
     command: ["bash", "-c"]
-    args: ["sleep 10"]
+    args: ["sleep 5"]
   containers:
   - name: uptimed
     image: uptimed
@@ -20,10 +20,25 @@ spec:
   - name: while
     image: bash
     command: ["bash", "-c"]
-    args: ["while true; do ls /var/run/secrets/kubernetes.io; echo nono > /data/cdrom/nono; sleep 1; done"]
+    args: ["while true; do cat /etc/uptimed/test.txt; sleep 1; done"]
     volumeMounts:
     - mountPath: /data/cdrom
       name: demo-volume
+    - mountPath: /etc/uptimed
+      name: uptimed-conf-volume
   volumes:
   - name: demo-volume
     emptyDir: {}
+  - name: uptimed-conf-volume
+    configMap:
+      defaultMode: 420
+      name: uptimed-conf
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uptimed-conf
+data:
+  test.txt: |-
+    hello

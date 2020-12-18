@@ -57,7 +57,8 @@ Containers are implemented.
 
 EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
 bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
-are read-only or read-write depending on settings.
+are read-only or read-write depending on settings. When configMaps and Secrets are updated the new
+contents are updated on disk.
 
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
 being generated.

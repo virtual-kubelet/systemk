@@ -61,6 +61,7 @@ func main() {
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
 		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {
+			cfg.ConfigPath = o.KubeConfigPath
 			p, err := systemd.New(cfg)
 			if err != nil {
 				return p, err

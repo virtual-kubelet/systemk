@@ -8,11 +8,12 @@ require (
 	github.com/gorilla/mux v1.7.3
 	github.com/spf13/pflag v1.0.5
 	github.com/virtual-kubelet/node-cli v0.3.1
-	github.com/virtual-kubelet/virtual-kubelet v1.3.0
-	k8s.io/api v0.18.4
-	k8s.io/apimachinery v0.18.4
-	k8s.io/client-go v0.18.4
+	github.com/virtual-kubelet/virtual-kubelet v1.3.1-0.20201215041340-8affa1c42a33
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
+	k8s.io/client-go v0.18.6
 	k8s.io/klog/v2 v2.4.0
+	k8s.io/kubectl v0.0.0
 )
 
 replace (
