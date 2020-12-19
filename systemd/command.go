@@ -11,15 +11,16 @@ import (
 )
 
 // commandAndArgs returns an updated ExecStart strings slice taking the pod's Command and Args
-// into account.
+// into account. Any errors will lead to an invalid unit, but the control plane deals with those.
 func commandAndArgs(uf *unit.File, c corev1.Container) []string {
 	// If command and/or args are given we need to override the ExecStart
-	// Bit execStart should be a string slice, but isn't returned like this, so this involves some string wrangling
-	// to get things right.
-	execStart := uf.Contents["Service"]["ExecStart"] // check if exists...?
+	execStart := uf.Contents["Service"]["ExecStart"]
 	cmdargs := execStart
 	if len(execStart) == 1 {
 		cmdargs = strings.Fields(execStart[0])
+	}
+	if len(cmdargs) == 0 {
+		cmdargs = make([]string, 1)
 	}
 
 	if c.Command != nil {
@@ -28,13 +29,14 @@ func commandAndArgs(uf *unit.File, c corev1.Container) []string {
 			if err == nil {
 				c.Command[0] = fullpath
 			}
-			// if this errored the unit will fail, so fail there instead of erroring here.
 		}
 		cmdargs[0] = strings.Join(c.Command, " ") // some args might be included here/. Does this needs quoting?
 	}
 	if c.Args != nil {
-		cmdargs = cmdargs[:1]
-		// if they contain space the need to be quoted. Maybe always quote?
+		if len(cmdargs) > 0 {
+			cmdargs = cmdargs[:1]
+		}
+		// quote the arguments
 		for _, a := range c.Args {
 			cmdargs = append(cmdargs, fmt.Sprintf("%q", a))
 

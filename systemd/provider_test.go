@@ -57,7 +57,6 @@ func testPodSpecUnit(t *testing.T, p *P, base string) {
 		t.Errorf("failed to call CreatePod: %v", err)
 		return
 	}
-	// now it's just string compare
 	got := ""
 	for _, c := range pod.Spec.Containers {
 		name := PodToUnitName(pod, c.Name)

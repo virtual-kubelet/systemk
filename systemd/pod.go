@@ -189,7 +189,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
 		execStart := commandAndArgs(uf, c)
-		uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStart, " "))
+		if len(execStart) > 0 {
+			uf = uf.Overwrite("Service", "ExecStart", strings.Join(execStart, " "))
+		}
 
 		id := string(pod.ObjectMeta.UID) // give multiple containers the same access? Need to test this.
 		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)

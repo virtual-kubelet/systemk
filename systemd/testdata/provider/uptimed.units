@@ -15,7 +15,7 @@ StandardError=journal
 User=1
 Group=1
 RemainAfterExit=true
-ExecStart=need to be overwritten
+ExecStart=
 TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444
