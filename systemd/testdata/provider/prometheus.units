@@ -15,7 +15,7 @@ StandardError=journal
 User=0
 Group=0
 RemainAfterExit=true
-ExecStart=need "--config.file=/etc/prometheus/prometheus.yml" "--storage.tsdb.path=/tmp/prometheus"
+ExecStart= "--config.file=/etc/prometheus/prometheus.yml" "--storage.tsdb.path=/tmp/prometheus"
 TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444

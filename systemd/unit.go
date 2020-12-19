@@ -278,7 +278,7 @@ Description=systemk
 Documentation=man:systemk(8)
 
 [Service]
-ExecStart=need to be overwritten
+ExecStart=
 
 [Install]
 WantedBy=multi-user.target
