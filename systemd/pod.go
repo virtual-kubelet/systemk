@@ -69,7 +69,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		klog.Infof("Failed to setup volumes: %s", err)
 	}
 
-	uid, gid := UidGidFromSecurityContext(pod)
+	uid, gid := uidGidFromSecurityContext(pod)
 	tmp := []string{"/var", "/run"}
 
 	unitsToStart := []string{}

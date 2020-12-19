@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  securityContext:
+    windowsOptions:
+      runAsUserName: "root"
+  serviceAccountName: prometheus
+  containers:
+  - name: prometheus
+    image: deb://www.miek.nl/prometheus_2.23.0-0~20.040_amd64.deb
+    args:
+    - "--config.file=/etc/prometheus/prometheus.yml"
+    - "--storage.tsdb.path=/tmp/prometheus"
+    ports:
+    - containerPort: 9090

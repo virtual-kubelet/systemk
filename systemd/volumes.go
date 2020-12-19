@@ -36,7 +36,7 @@ const (
 func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 	vol := make(map[string]string)
 	id := string(pod.ObjectMeta.UID)
-	uid, gid := UidGidFromSecurityContext(pod)
+	uid, gid := uidGidFromSecurityContext(pod)
 	for i, v := range pod.Spec.Volumes {
 		klog.Infof("Looking at volume %q#%d", v.Name, i)
 		switch {
@@ -174,7 +174,7 @@ func writeFile(dir, file, uid, gid string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	klog.Infof("Chowning %q to %s %s", tmpfile.Name(), uid, gid)
+	klog.Infof("Chowning %q to %s.%s", tmpfile.Name(), uid, gid)
 	if err := chown(tmpfile.Name(), uid, gid); err != nil {
 		return err
 	}
