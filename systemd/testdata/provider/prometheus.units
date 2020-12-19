@@ -1,0 +1,27 @@
+[Unit]
+Description=systemk
+Documentation=man:systemk(8)
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+ProtectSystem=true
+ProtectHome=tmpfs
+PrivateMounts=true
+ReadOnlyPaths=/
+StandardOutput=journal
+StandardError=journal
+User=0
+Group=0
+RemainAfterExit=true
+ExecStart=need "--config.file=/etc/prometheus/prometheus.yml" "--storage.tsdb.path=/tmp/prometheus"
+TemporaryFileSystem=/var /run
+Environment=HOSTNAME=localhost
+Environment=KUBERNETES_SERVICE_PORT=6444
+Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
+
+[X-Kubernetes]
+Namespace=default
+ClusterName=
+Id=aa-bb

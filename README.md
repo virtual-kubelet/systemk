@@ -105,6 +105,19 @@ and have access to all the meta data, like pod UID and if the unit is an init co
 By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
 process isolation. Starting two pods that use the same port is guaranteed to fail for one.
 
+### Using username in securityContext
+
+To specify an *username* in a securityContext you need to use the `windowsOptions`:
+~~~
+spec:
+  securityContext:
+    windowsOptions:
+      runAsUserName: "prometheus"
+~~~
+The primary group will be found by systemk and both a `User` and `Group` will be injected into the
+unit file. The files created on disk for the configMap/secrets/emptyDir will be made of the same
+user/group.
+
 ## Use with K3S
 
 Download k3s from it's releases on GitHub, you just need the `k3s` binary. Use the `k3s/k3s` shell
