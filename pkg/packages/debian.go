@@ -26,11 +26,11 @@ const (
 
 // Install install the given package at the given version
 // Does nothing if package is already installed
-func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
+func (p *DebianPackageManager) Install(pkg, version string) (bool, error) {
 	klog.Infof("Checking if %q is installed", p.Clean(pkg))
 	checkCmd := exec.Command(dpkgCommand, "-s", p.Clean(pkg))
 	if err := checkCmd.Run(); err == nil {
-		return nil, false
+		return false, nil
 	}
 
 	installCmd := new(exec.Cmd)
@@ -38,7 +38,7 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 	case strings.HasPrefix(pkg, "deb://"):
 		pkgToInstall, err := fetch(pkg[6:], "")
 		if err != nil {
-			return err, false
+			return false, err
 		}
 		installCmdArgs := []string{"-i", pkgToInstall}
 		installCmd = exec.Command(dpkgCommand, installCmdArgs...)
@@ -53,7 +53,7 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 
 	policyfile, err := policy()
 	if err != nil {
-		return err, false
+		return false, err
 	}
 	defer os.Remove(policyfile)
 
@@ -64,9 +64,9 @@ func (p *DebianPackageManager) Install(pkg, version string) (error, bool) {
 
 	klog.Infof("Running %s", installCmd)
 	if out, err := installCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to install: %s\n%s", err, out), false
+		return false, fmt.Errorf("failed to install: %s\n%s", err, out)
 	}
-	return nil, true
+	return true, nil
 }
 
 // policy writes a small script to disk, that only does exit 0

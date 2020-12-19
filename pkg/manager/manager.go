@@ -153,7 +153,7 @@ func (m *UnitManager) Property(name, property string) string {
 	return p.Value.String()
 }
 
-// Property returns the property of the unit.
+// ServiceProperty returns the property of the named unit.
 func (m *UnitManager) ServiceProperty(name, property string) string {
 	p, err := m.systemd.GetServiceProperty(name, property)
 	if err != nil {
@@ -182,6 +182,7 @@ func (m *UnitManager) readUnit(name string) (string, error) {
 // Reload tells systemd to reload all unit files.
 func (m *UnitManager) Reload() error { return m.systemd.Reload() }
 
+// Unit returns the named unit from the manager. This is used in testing only.
 func (m *UnitManager) Unit(name string) string {
 	klog.Info("not implemented, used for testing")
 	return ""

@@ -24,7 +24,7 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	}
 	p := new(P)
 	p.m, _ = manager.NewTest()
-	p.pkg = &packages.TestPackageManager{}
+	p.pkg = &packages.NoopPackageManager{}
 
 	os.Setenv("HOSTNAME", "localhost")
 
