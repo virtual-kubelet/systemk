@@ -21,17 +21,18 @@ const (
 	configmapDir = "configmaps"
 )
 
+// Volume describes what volumes should be created.
 type Volume int
 
 const (
-	All Volume = iota
-	ConfigMap
-	Secret
+	volumeAll Volume = iota
+	volumeConfigMap
+	volumeSecret
 )
 
 // volumes inspecs the volumes and returns a maaping with the volume's Name and the directory on-disk that
 // should be used for this. The on-disk structure is prepared and can be used.
-// which considered what volumes should be setup. Defaults to All
+// which considered what volumes should be setup. Defaults to volumeAll
 func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 	vol := make(map[string]string)
 	id := string(pod.ObjectMeta.UID)
@@ -40,13 +41,13 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 		klog.Infof("Looking at volume %q#%d", v.Name, i)
 		switch {
 		case v.HostPath != nil:
-			if which != All {
+			if which != volumeAll {
 				continue
 			}
 			vol[v.Name] = ""
 
 		case v.EmptyDir != nil:
-			if which != All {
+			if which != volumeAll {
 				continue
 			}
 			dir := filepath.Join(varrun, id)
@@ -62,7 +63,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			vol[v.Name] = dir
 
 		case v.Secret != nil:
-			if which != All && which != Secret {
+			if which != volumeAll && which != volumeSecret {
 				continue
 			}
 			secret, err := p.rm.GetSecret(v.Secret.SecretName, pod.Namespace)
@@ -101,7 +102,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			vol[v.Name] = dir
 
 		case v.ConfigMap != nil:
-			if which != All && which != ConfigMap {
+			if which != volumeAll && which != volumeConfigMap {
 				continue
 			}
 			configMap, err := p.rm.GetConfigMap(v.ConfigMap.Name, pod.Namespace)

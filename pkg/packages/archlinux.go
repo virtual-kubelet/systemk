@@ -27,7 +27,7 @@ func (p *ArchlinuxPackageManager) Setup() error {
 
 // Install install the given package at the given version
 // Does nothing if package is already installed
-func (p *ArchlinuxPackageManager) Install(pkg, version string) (error, bool) {
+func (p *ArchlinuxPackageManager) Install(pkg, version string) (bool, error) {
 	checkCmdArgs := []string{"-Qi", pkg}
 	checkCmd := exec.Command(pacmanCommand, checkCmdArgs...)
 
@@ -35,7 +35,7 @@ func (p *ArchlinuxPackageManager) Install(pkg, version string) (error, bool) {
 	if err == nil {
 		// package exists
 		// TODO: check installed version
-		return nil, false
+		return false, nil
 	}
 
 	// no way to specify a package version in arch
@@ -43,7 +43,7 @@ func (p *ArchlinuxPackageManager) Install(pkg, version string) (error, bool) {
 	installCmd := exec.Command(aptGetCommand, installCmdArgs...)
 
 	_, err = installCmd.CombinedOutput()
-	return err, true
+	return true, err
 }
 
 // Unitfile returns the location of the unitfile for the given package

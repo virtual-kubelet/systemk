@@ -11,12 +11,13 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// If a provider implements the Updater interface we will send pings when configmaps and secrets are updated.
+// The Updater interface we will send notifications when configmaps and secrets are updated.
 type Updater interface {
 	UpdateConfigMap(context.Context, *corev1.Pod, *corev1.ConfigMap) error
 	UpdateSecret(context.Context, *corev1.Pod, *corev1.Secret) error
 }
 
+// Watcher checks the API server for configMap and secret updates and notifies the provider.
 type Watcher struct {
 	mu        sync.RWMutex
 	clientset *kubernetes.Clientset
@@ -138,7 +139,6 @@ func (w *Watcher) Unwatch(pod *corev1.Pod) {
 			pods := []*corev1.Pod{}
 			for _, p := range w.configs[key] {
 				if p.Namespace == pod.Namespace && p.Name == pod.Name {
-					println("continueing", p.Namespace, p.Name)
 					continue
 				}
 				pods = append(pods, p)

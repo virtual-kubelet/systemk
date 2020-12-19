@@ -64,7 +64,7 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	klog.Info("CreatedPod called")
 
-	vol, err := p.volumes(pod, All)
+	vol, err := p.volumes(pod, volumeAll)
 	if err != nil {
 		klog.Infof("Failed to setup volumes: %s", err)
 	}
@@ -139,7 +139,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
 		// if we're downloading the image, the image name needs cleaning
-		err, installed := p.pkg.Install(c.Image, "")
+		installed, err := p.pkg.Install(c.Image, "")
 		if err != nil {
 			klog.Infof("Failed to install package %q: %s", c.Image, err)
 			return err
@@ -298,12 +298,12 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 }
 
 func (p *P) UpdateConfigMap(ctx context.Context, pod *corev1.Pod, cm *corev1.ConfigMap) error {
-	_, err := p.volumes(pod, ConfigMap)
+	_, err := p.volumes(pod, volumeConfigMap)
 	return err
 }
 
 func (p *P) UpdateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret) error {
-	_, err := p.volumes(pod, Secret)
+	_, err := p.volumes(pod, volumeSecret)
 	return err
 }
 
