@@ -20,6 +20,8 @@ TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444
 Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
+Environment=SYSTEMK_NODE_INTERNAL_IP=192.168.1.1
+Environment=SYSTEMK_NODE_EXTERNAL_IP=172.16.0.1
 
 [X-Kubernetes]
 Namespace=default
@@ -47,6 +49,8 @@ TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444
 Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
+Environment=SYSTEMK_NODE_INTERNAL_IP=192.168.1.1
+Environment=SYSTEMK_NODE_EXTERNAL_IP=172.16.0.1
 
 [X-Kubernetes]
 Namespace=default

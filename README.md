@@ -100,10 +100,29 @@ We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section.
 know a pod state systemk will query systemd and read the unit file back. This way we know the status
 and have access to all the meta data, like pod UID and if the unit is an init container.
 
-### Limitations
+### Addresses
 
-By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
-process isolation. Starting two pods that use the same port is guaranteed to fail for one.
+Addressses are configured with one the systemk commandline flags: `--node-ip` and
+`--node-external-ip`, these may be IPv4 or IPv6. In the future this may get expanded into allow both
+(i.e. dual stack support). The primary Pod address will be the value from `--node-external-ip`.
+
+If `--node-ip` is not given, systemk will try to find a RFC 1918 address on the interfaces use the
+first one found.
+
+If `--node-external-ip` is not given, systemk will try to find a non-RFC 1918 address on the
+interfaces and use the first one found.
+
+If after all this one of the values is still not found, the other existing value will be copied, i.e
+internal == external in that case. If both were empty systemk exists with a fatal error.
+
+### Environment Variables
+
+The following environment variables are made available to the units:
+
+* `HOSTNAME`, `KUBERNETES_SERVICE_PORT` and `KUBERNETES_SERVICE_HOST` (same as the kubelet).
+* `SYSTEMK_NODE_INTERNAL_IP` the internal IP address.
+* `SYSTEMK_NODE_EXTERNAL_IP` the external IP address.
+
 
 ### Using username in securityContext
 
@@ -117,6 +136,12 @@ spec:
 The primary group will be found by systemk and both a `User` and `Group` will be injected into the
 unit file. The files created on disk for the configMap/secrets/emptyDir will be made of the same
 user/group.
+
+
+### Limitations
+
+By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
+process isolation. Starting two pods that use the same port is guaranteed to fail for one.
 
 ## Use with K3S
 
