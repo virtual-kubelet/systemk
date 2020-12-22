@@ -198,7 +198,7 @@ func (m *UnitManager) States(prefix string) (map[string]*unit.State, error) {
 	if err != nil {
 		return nil, err
 	}
-	klog.Infof("%d statusses for prefix %q returned", len(dbusStatuses), prefix)
+	klog.Infof("%d statuses returned", len(dbusStatuses))
 
 	states := make(map[string]*unit.State)
 	for _, dus := range dbusStatuses {

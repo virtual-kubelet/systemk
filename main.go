@@ -40,10 +40,15 @@ func main() {
 	var (
 		certFile string
 		keyFile  string
+		nodeIP   string
+		nodeEIP  string
 	)
 	flags := pflag.NewFlagSet("client", pflag.ContinueOnError)
+	// these options need to be make inline with k3s or make clear they afffect logs, certfile and keyfile is too short
 	flags.StringVar(&certFile, "certfile", "", "certfile")
 	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
+	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node")
+	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node")
 
 	ctx := cli.ContextWithCancelOnSignal(context.Background())
 
@@ -54,7 +59,6 @@ func main() {
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
 	o.NodeName = system.Hostname()
-
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
 		cli.WithPersistentFlags(flags),
@@ -66,8 +70,11 @@ func main() {
 			if err != nil {
 				return p, err
 			}
+			p.SetNodeIPs(nodeIP, nodeEIP)
+			klog.Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
+
 			if certFile == "" || keyFile == "" {
-				klog.Info("Not certificates found, disabling GetContainerLogs")
+				klog.Info("No certificates found, disabling GetContainerLogs")
 				return p, nil
 			}
 

@@ -10,17 +10,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const(
-	defaultOS="Linux"
+const (
+	defaultOS = "Linux"
 )
 
 // ConfigureNode enables a provider to configure the node object that will be used for Kubernetes.
 func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
-	node.Status.Capacity = p.capacity()
-	node.Status.Allocatable = p.capacity()
-	node.Status.Conditions = p.nodeConditions()
-	node.Status.Addresses = p.nodeAddresses()
-	node.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
+	node.Status.Capacity = capacity()
+	node.Status.Allocatable = capacity()
+	node.Status.Conditions = nodeConditions()
+	node.Status.Addresses = append([]corev1.NodeAddress{*p.NodeInternalIP}, *p.NodeExternalIP)
+	node.Status.DaemonEndpoints = nodeDaemonEndpoints(p.DaemonPort)
 	node.Status.NodeInfo.OperatingSystem = defaultOS
 	node.Status.NodeInfo.KernelVersion = system.Kernel()
 	node.Status.NodeInfo.OSImage = system.Image()
@@ -35,11 +35,10 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 			corev1.LabelZoneRegionStable:        system.Hostname(),
 		},
 	}
-	p.Addresses = node.Status.Addresses
 }
 
-// nodeAddresses returns a list of addresses for the node status within Kubernetes.
-func (p *P) nodeAddresses() []corev1.NodeAddress {
+// nodeAddresses finds the internal and external address of the node (if found).
+func nodeAddresses() (internal, external *corev1.NodeAddress) {
 	cidrs := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"}
 	rfc1918 := make([]*net.IPNet, len(cidrs))
 	for i, cidr := range cidrs {
@@ -47,44 +46,40 @@ func (p *P) nodeAddresses() []corev1.NodeAddress {
 		rfc1918[i] = block
 	}
 
-	ips := system.IPs()
-	na := make([]corev1.NodeAddress, len(ips))
-	for i, ip := range ips {
+	for _, ip := range system.IPs() {
 		for _, block := range rfc1918 {
-			na[i] = corev1.NodeAddress{
-				Address: ip.String(),
-				Type:    corev1.NodeExternalIP,
-			}
 			if block.Contains(ip) {
-				na[i].Type = corev1.NodeInternalIP
+				if internal == nil {
+					internal = &corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeInternalIP}
+				}
+				continue
+			}
+
+			if external == nil {
+				external = &corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeExternalIP}
 			}
 		}
 	}
-	// corev1.NodeInternalDNS??
-	return na
+	return internal, external
 }
 
 // nodeDaemonEndpoints returns NodeDaemonEndpoints for the node status within Kubernetes.
-func (p *P) nodeDaemonEndpoints() corev1.NodeDaemonEndpoints {
-	// use for logs
-	return corev1.NodeDaemonEndpoints{
-		KubeletEndpoint: corev1.DaemonEndpoint{
-			Port: p.DaemonPort,
-		},
-	}
+func nodeDaemonEndpoints(port int32) corev1.NodeDaemonEndpoints {
+	// used for logs
+	return corev1.NodeDaemonEndpoints{KubeletEndpoint: corev1.DaemonEndpoint{Port: port}}
 }
 
 // capacity returns a resource list containing the capacity limits set for Zun.
-func (p *P) capacity() corev1.ResourceList {
+func capacity() corev1.ResourceList {
 	return corev1.ResourceList{
 		"cpu":     resource.MustParse(system.CPU()),
 		"memory":  resource.MustParse(system.Memory()),
 		"pods":    resource.MustParse(system.Pid()),
-		"storage": resource.MustParse("40G"), // We're using tmpfs _a_ lot.. so
+		"storage": resource.MustParse("40G"), // needs the size of the /var FS
 	}
 }
 
-func (p *P) nodeConditions() []corev1.NodeCondition {
+func nodeConditions() []corev1.NodeCondition {
 	return []corev1.NodeCondition{
 		{
 			Type:               "Ready",
@@ -135,20 +130,4 @@ func (p *P) nodeConditions() []corev1.NodeCondition {
 			Message:            "kubelet has sufficient PIDs available",
 		},
 	}
-}
-
-// externalOrInternalAddress prefers to return the external address of the node, if not available
-// an internal address will be returned. If neither is found a 127.0.0.1 node address is synthesized.
-func externalOrInternalAddress(addrs []corev1.NodeAddress) corev1.NodeAddress {
-	for _, a := range addrs {
-		if a.Type == corev1.NodeExternalIP {
-			return a
-		}
-	}
-	for _, a := range addrs {
-		if a.Type == corev1.NodeInternalIP {
-			return a
-		}
-	}
-	return corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: "127.0.0.1"}
 }

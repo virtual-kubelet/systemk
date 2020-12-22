@@ -14,7 +14,6 @@ import (
 var (
 	// this is a variable so it can be overridden during unit-testing.
 	osReleaseFilePath = "/etc/os-release"
-
 )
 
 // Memory returns the amount of memory in the system.

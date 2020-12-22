@@ -96,8 +96,8 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 
 			Message:   string(toPhase(containerStatuses)),
 			Reason:    "",
-			HostIP:    (externalOrInternalAddress(p.Addresses)).Address,
-			PodIP:     (externalOrInternalAddress(p.Addresses)).Address,
+			HostIP:    p.NodeExternalIP.Address,
+			PodIP:     p.NodeExternalIP.Address,
 			StartTime: &starttime,
 		},
 	}

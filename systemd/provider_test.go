@@ -25,6 +25,8 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	p := new(P)
 	p.m, _ = manager.NewTest()
 	p.pkg = &packages.NoopPackageManager{}
+	p.NodeInternalIP = &corev1.NodeAddress{Address: "192.168.1.1", Type: corev1.NodeInternalIP}
+	p.NodeExternalIP = &corev1.NodeAddress{Address: "172.16.0.1", Type: corev1.NodeExternalIP}
 
 	os.Setenv("HOSTNAME", "localhost")
 
