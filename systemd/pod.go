@@ -84,7 +84,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		for _, v := range c.VolumeMounts {
 			dir, ok := vol[v.Name]
 			if !ok {
-				klog.Infof("failed to find volumeMount %s in the specific volumes, skpping", v.Name)
+				klog.Infof("failed to find volumeMount %s in the specific volumes, skipping", v.Name)
 				continue
 			}
 
@@ -136,7 +136,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
+		// TODO(): parse c.Image for tag to get version. Check ImagePullAlways to reinstall??
 		// if we're downloading the image, the image name needs cleaning
 		installed, err := p.pkg.Install(c.Image, "")
 		if err != nil {
@@ -186,7 +186,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		// keep the unit around, the control plane where clear it with a DeletePod.
+		// keep the unit around, until DeletePod is triggered.
 		// this is also for us to return the state even after the unit left the stage.
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
@@ -290,7 +290,7 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		name := PodToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
-			klog.Warningf("Failed to triggger top: %s", err)
+			klog.Warningf("Failed to trigger top: %s", err)
 		}
 		if err := p.m.Unload(name); err != nil {
 			klog.Warningf("Failed to unload: %s", err)
