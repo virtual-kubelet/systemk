@@ -54,11 +54,19 @@ spec:
     windowsOptions:
       runAsUserName: "prometheus"
   serviceAccountName: prometheus
+  initContainers:
+  - name: init-prometheus-config
+    image: bash
+    command: ["bash", "-c"]
+    args: ["envsubst '$SYSTEMK_NODE_INTERNAL_IP' < /tmp/init-prometheus/prometheus.yaml.orig > /tmp/init-prometheus/prometheus.yaml"]
+    volumeMounts:
+    - name: prometheus-config-volume
+      mountPath: /tmp/init-prometheus
   containers:
   - name: prometheus
     image: deb://www.miek.nl/prometheus_2.23.0-0~20.040_amd64.deb
     args:
-    - "--config.file=/etc/prometheus/prometheus.yml"
+    - "--config.file=/etc/prometheus/prometheus.yaml"
     - "--storage.tsdb.path=/tmp/prometheus"
     ports:
     - containerPort: 9090
@@ -82,7 +90,7 @@ metadata:
   name: prometheus-server-conf
   namespace: monitoring
 data:
-  prometheus.yml: |-
+  prometheus.yaml.orig: |-
     scrape_configs:
     - job_name: 'kubernetes-pods'
       kubernetes_sd_configs:
@@ -97,4 +105,11 @@ data:
       - source_labels: [__meta_kubernetes_pod_name]
         action: replace
         target_label: kubernetes_pod_name
----
+      - source_labels: [__address__]
+        regex: '.*:(\d+)'
+        action: replace
+        target_label: __address__
+        replacement: '${SYSTEMK_NODE_INTERNAL_IP}:$1'
+      - source_labels: [__meta_kubernetes_pod_container_init]
+        regex: 'true'
+        action: drop
