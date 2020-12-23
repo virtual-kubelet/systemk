@@ -57,7 +57,7 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 
 	containers, initContainers := p.toContainers(stats)
 	containerStatuses, initContainerStatuses := p.toContainerStatuses(stats)
-	starttime := metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(name, "ExecMainStartTimestampMonotonic")))
+	starttime := metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(name, "ExecMainStartTimestamp")))
 
 	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -182,13 +182,13 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 				ExitCode:    exitcode,
 				Reason:      reason,
 				Message:     reason,
-				StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
-				FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))),
+				StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestamp"))),
+				FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestamp"))),
 				ContainerID: "pid://" + p.m.ServiceProperty(u.Name, "MainPID"),
 			},
 		}
 	case u.SubState == "dead": // either ran, or waiting to be run
-		exitStamp := propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))
+		exitStamp := propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainExitTimestamp"))
 		if exitStamp > 0 {
 			exitcode := int32(propertyNumberToInt(p.m.ServiceProperty(u.Name, "ExecMainStatus")))
 			reason := string(corev1.PodFailed)
@@ -200,8 +200,8 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 					ExitCode:    exitcode,
 					Reason:      reason,
 					Message:     reason,
-					StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
-					FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestampMonotonic"))),
+					StartedAt:   metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestamp"))),
+					FinishedAt:  metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainExitTimestamp"))),
 					ContainerID: "pid://" + p.m.ServiceProperty(u.Name, "MainPID"),
 				},
 			}
@@ -219,7 +219,7 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 	case u.SubState == "running" || u.SubState == "auto-restart" || u.SubState == "reload":
 		return v1.ContainerState{
 			Running: &v1.ContainerStateRunning{
-				StartedAt: metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestampMonotonic"))),
+				StartedAt: metav1.NewTime(propertyTimestampToTime(p.m.ServiceProperty(u.Name, "ExecMainStartTimestamp"))),
 			},
 		}
 
@@ -319,5 +319,9 @@ func propertyNumberToInt(s string) int {
 
 func propertyTimestampToTime(s string) time.Time {
 	i, _ := strconv.ParseInt(s, 10, 64)
-	return time.Unix(i, 0)
+	// i is microseconds as per systemd D-Bus documentation:
+	// "Note that properties exposing time values are usually encoded in
+	// microseconds (usec) on the bus, even if their corresponding settings
+	// in the unit files are in seconds."
+	return time.Unix(i/1000000, i%1000000)
 }
