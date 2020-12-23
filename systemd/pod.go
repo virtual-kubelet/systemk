@@ -108,7 +108,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			// * anything else don't touch: this likely makes the unit start, but then fail. (we may intercept this and return a decent message
 			//   so you can see this with events
 			//
-			// Cleanup of these directories is hard - systemd clean <unit> exists for doesn't assume other units are using this space.
 			_, err := os.Stat(v.MountPath)
 			switch os.IsNotExist(err) {
 			case true: // doesn't exist
@@ -286,7 +285,7 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 
 // DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("DeletePod called")
+	klog.Infof("DeletePod called for pod %q/%q", pod.Namespace, pod.Name)
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		name := podToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
@@ -295,9 +294,16 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 		if err := p.m.Unload(name); err != nil {
 			klog.Warningf("Failed to unload: %s", err)
 		}
+		klog.Infof("Deleted unit [%q] successfully", name)
 	}
 	p.m.Reload()
 	p.w.Unwatch(pod)
+
+	// Clean-up volumes.
+	if err := cleanPodEphemeralVolumes(string(pod.UID)); err != nil {
+		klog.Warningf("failed to clean-up volumes for pod %q/%q: %s", pod.Namespace, pod.Name, err)
+	}
+
 	return nil
 }
 

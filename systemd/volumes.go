@@ -30,7 +30,7 @@ const (
 	volumeSecret
 )
 
-// volumes inspects the volumes and returns a mapping with the volume's Name and the directory on-disk that
+// volumes inspects the PodSpec.Volumes attribute and returns a mapping with the volume's Name and the directory on-disk that
 // should be used for this. The on-disk structure is prepared and can be used.
 // which considered what volumes should be setup. Defaults to volumeAll
 func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
@@ -208,3 +208,8 @@ func chown(name, uid, gid string) error {
 }
 
 const dirPerms = 02750
+
+func cleanPodEphemeralVolumes(podId string) error {
+	podEphemeralVolumes := filepath.Join(varrun, podId)
+	return os.RemoveAll(podEphemeralVolumes)
+}
