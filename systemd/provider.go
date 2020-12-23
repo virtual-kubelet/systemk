@@ -27,10 +27,10 @@ type P struct {
 
 	NodeInternalIP *corev1.NodeAddress
 	NodeExternalIP *corev1.NodeAddress
-	DaemonPort     int32
+	ClusterDomain  string
 
-	ClusterDomain string
-	Host          string
+	daemonPort    int32
+	kubernetesURL string
 }
 
 // New returns a new systemd provider.
@@ -66,8 +66,8 @@ func New(cfg provider.InitConfig) (*P, error) {
 	}
 
 	p.rm = cfg.ResourceManager
-	p.DaemonPort = cfg.DaemonPort
 	p.ClusterDomain = cfg.KubeClusterDomain
+	p.daemonPort = cfg.DaemonPort
 
 	if cfg.ConfigPath == "" {
 		return p, nil
@@ -80,8 +80,7 @@ func New(cfg provider.InitConfig) (*P, error) {
 	if err != nil {
 		return p, err
 	}
-
-	p.Host = restConfig.Host
+	p.kubernetesURL = restConfig.Host
 
 	clientset, err := nodeutil.ClientsetFromEnv(cfg.ConfigPath)
 	if err != nil {

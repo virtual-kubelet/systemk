@@ -61,7 +61,7 @@ func testPodSpecUnit(t *testing.T, p *P, base string) {
 	}
 	got := ""
 	for _, c := range pod.Spec.Containers {
-		name := PodToUnitName(pod, c.Name)
+		name := podToUnitName(pod, c.Name)
 		got += p.m.Unit(name)
 	}
 

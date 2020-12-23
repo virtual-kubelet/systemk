@@ -15,8 +15,8 @@ func (p *P) defaultEnvironment() []string {
 
 	host := "127.0.0.1"
 	port := "6444"
-	if p.Host != "" {
-		url, _ := url.Parse(p.Host)
+	if p.kubernetesURL != "" {
+		url, _ := url.Parse(p.kubernetesURL)
 		host, port, _ = net.SplitHostPort(url.Host)
 	}
 

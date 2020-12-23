@@ -20,7 +20,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.Allocatable = capacity()
 	node.Status.Conditions = nodeConditions()
 	node.Status.Addresses = append([]corev1.NodeAddress{*p.NodeInternalIP}, *p.NodeExternalIP)
-	node.Status.DaemonEndpoints = nodeDaemonEndpoints(p.DaemonPort)
+	node.Status.DaemonEndpoints = nodeDaemonEndpoints(p.daemonPort)
 	node.Status.NodeInfo.OperatingSystem = defaultOS
 	node.Status.NodeInfo.KernelVersion = system.Kernel()
 	node.Status.NodeInfo.OSImage = system.Image()

@@ -22,7 +22,7 @@ import (
 
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	klog.Info("GetPod called")
-	stats, err := p.m.States(UnitPrefix(namespace, name))
+	stats, err := p.m.States(unitPrefix(namespace, name))
 	if err != nil {
 		klog.Infof("Failed to get states: %s", err)
 		return nil, nil
@@ -32,7 +32,7 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
-	states, err := p.m.States(Prefix)
+	states, err := p.m.States(prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
-		name := PodToUnitName(pod, c.Name)
+		name := podToUnitName(pod, c.Name)
 		if installed {
 			p.m.Mask(c.Image + unit.ServiceSuffix)
 		}
@@ -270,7 +270,7 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	klog.Infof("GetContainerLogs called")
 
-	unitname := UnitPrefix(namespace, podName) + separator + containerName
+	unitname := unitPrefix(namespace, podName) + separator + containerName
 	args := []string{"-u", unitname}
 	cmd := exec.Command("journalctl", args...)
 	// returns the buffers? What about following, use pipes here or something?
@@ -288,7 +288,7 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	klog.Infof("DeletePod called")
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
-		name := PodToUnitName(pod, c.Name)
+		name := podToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
 			klog.Warningf("Failed to trigger top: %s", err)
 		}
@@ -311,12 +311,12 @@ func (p *P) UpdateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret)
 	return err
 }
 
-func PodToUnitName(pod *corev1.Pod, containerName string) string {
-	return UnitPrefix(pod.Namespace, pod.Name) + separator + containerName + unit.ServiceSuffix
+func podToUnitName(pod *corev1.Pod, containerName string) string {
+	return unitPrefix(pod.Namespace, pod.Name) + separator + containerName + unit.ServiceSuffix
 }
 
-func UnitPrefix(namespace, podName string) string {
-	return Prefix + separator + namespace + separator + podName
+func unitPrefix(namespace, podName string) string {
+	return prefix + separator + namespace + separator + podName
 }
 
 func Image(name string) string {
@@ -352,8 +352,8 @@ func Namespace(name string) string {
 }
 
 const (
-	// Prefix the unit file prefix we used.
-	Prefix    = "systemk"
+	// prefix the unit file prefix we used.
+	prefix    = "systemk"
 	separator = "."
 )
 
