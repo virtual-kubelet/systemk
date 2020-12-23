@@ -301,12 +301,12 @@ func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	return nil
 }
 
-func (p *P) UpdateConfigMap(ctx context.Context, pod *corev1.Pod, cm *corev1.ConfigMap) error {
+func (p *P) updateConfigMap(ctx context.Context, pod *corev1.Pod, cm *corev1.ConfigMap) error {
 	_, err := p.volumes(pod, volumeConfigMap)
 	return err
 }
 
-func (p *P) UpdateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret) error {
+func (p *P) updateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret) error {
 	_, err := p.volumes(pod, volumeSecret)
 	return err
 }
