@@ -80,7 +80,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 		bindmounts := []string{}
 		bindmountsro := []string{}
-		rwpaths := []string{} // everything is RO, this will enable to pod to write to specific dirs.
+		rwpaths := []string{}
 		for _, v := range c.VolumeMounts {
 			dir, ok := vol[v.Name]
 			if !ok {
@@ -127,7 +127,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				}
 				if !empty {
 					klog.Infof("Directory %q is not empty, refusing to touch", v.MountPath)
-					// error, log, something??
 					break
 				}
 				klog.Infof("Chowning %q", v.MountPath)
@@ -154,6 +153,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if err != nil {
 			klog.Infof("Failed to create/use unit file for %q: %s", c.Image, err)
 			return err
+		}
+		if c.WorkingDir != "" {
+			uf = uf.Overwrite("Service", "WorkingDirectory", c.WorkingDir)
 		}
 
 		uf = uf.Overwrite("Service", "ProtectSystem", "true")
