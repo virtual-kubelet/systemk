@@ -1,48 +1,50 @@
 # Systemk: virtual kubelet for systemd
 
-This is a virtual kubelet provider that uses systemd as its backend. The aim is to make this to work
-with [K3s](https://github.com/rancher/k3s/) and go from there.
+This is a virtual kubelet provider that uses systemd as its backend.
 
-Every Linux system has systemd nowadays. By utilizing K3s (just one Go binary) and this virtual
-kubelet you can provision a system using the Kubernetes API. The networking is the host's network,
-so it make sense to use this for more heavy weight (stateful?) applications. The filesystem is semi
-hidden, but emptyDir and the like works.
+Every Linux system has systemd nowadays. By utilizing [K3s](https://k3s.io) (just one Go binary)
+and this virtual kubelet you can provision a system using the Kubernetes API. The networking is the
+host's network, so it make sense to use this for more heavy weight (stateful?) applications. The
+filesystem is semi hidden, but emptyDir and the like works.
 
 It is hoped this setup allows you to use the Kubernetes API without the need to immerse yourself in
 the (large) world of kubernetes (overlay networking, ingress objects, etc., etc.). However this
-_does_ imply networking and discovery (i.e.) DNS is already working on the system you're
-deploying this. How to get a system into a state it has, and can run, k3s and virtual-kubelet is an
-open questions (ready made image, a tiny bit of config mgmt (but how to bootstrap that?)).
+_does_ imply networking and discovery (i.e. host) DNS is already working on the system you're
+deploying this. How to get a system into a state it has, and can run, k3s and systemk is an open
+questions (Ready made image? A tiny bit of config mgmt?).
 
-`systemk` will use systemd to start pods as plain processes. This uses the cgroup stuff systemd has.
-This allows us to set resource limits, by just specifying those in the unit file (copy paste from
-the podSpec). Generally there is no (container) isolation in this setup - although for disk access
-things are fairly contained, i.e. /var/secrets/kubernets.io/token will be bind mounted into each
-unit, and will be shared across units in a pod.
+Systemk will use systemd to start pods as service unit(s). This uses the cgroup implementation
+systemd has. This allows us to set resource limits, by specifying those in the unit file (copy paste
+from the podSpec almost). Generally there is no (real container) isolation in this setup - although
+for disk access things are fairly contained, i.e. `/var/secrets/kubernets.io/token` will be bind
+mounted into each unit.
 
 You basically use the k8s control plane to start linux processes. There is also no address space
 allocated to the PODs specially, you are using the host's networking.
 
 "Images" are referencing (Debian) packages, these will be apt-get installed. Discovering that an
 installed package is no longer used is hard, so this will not be done. `systemk` will reuse the unit
-file that comes from this install. However some other data is inject into it to make it work fully
-for systemk. If there isn't an unit file (e.g. you use `bash` as the image), a unit file will be
-synthesized.
+file that comes from this install, almost exclusively to find the `ExecStart` option.
+A lot of extra data is injected into it to make it work fully for systemk. If there isn't an unit
+file (e.g. you use `bash` as the image), a unit file will be synthesized.
 
 Each scheduled unit will adhere to a naming scheme so `systemk` knows which ones are managed by it.
 
 ## Is This Useful?
 
-Unclear. I personally consider this (once it fully works) useful enough to manage a small farm of
-machines. Say you administer 200 machines and you need saner management and introspection than
-config management can give you? I.e. with `kubectl` you can find which machines didn't run a DNS
-server, with *deployments* you can more safely push out upgrades, "insert favorite Kubernetes
-feature here".
+Likely. I personally consider this useful enough to manage a small farm of machines. Say you
+administer 200 machines and you need saner management and introspection than config management
+can give you? I.e. with `kubectl` you can find which machines didn't run a DNS server, with
+*deployments* you can more safely push out upgrades, with "insert favorite Kubernetes feature here"
+you can do canarying.
 
-Monitoring only requires prometheus to discover the pods via the Kubenetes API, vastly simplifying
-that particular setup.
+Monitoring, for instance, only requires prometheus to discover the pods via the Kubenetes API,
+vastly simplifying that particular setup. See
+[prometheus.yaml](https://github.com/virtual-kubelet/systemk/blob/main/k3s/prometheus.yaml) for a
+complete, working, setup that discovers running Pods and scrapes them. The prometheus config is
+*just* `kubernetes_sd_configs`.
 
-I currently manage 2 (Debian) machines and this is all manual - i.e.: login, apt-get upgrade, fiddle
+Currently I manage 2 (Debian) machines and this is all manual - i.e.: login, apt-get upgrade, fiddle
 with config files etc. It may turn of that k3s + systemk is a better way of handling even *2* machines.
 
 Note that getting to the stage where this all runs, is secured and everything has the correct TLS
@@ -53,11 +55,11 @@ some ideas there.
 
 Multiple containers in a pod can be run and they can see each others storage. Creating, deleting,
 inspecting Pods all work. Higher level abstractions (replicaset, deployment) work too. Init
-Containers are implemented.
+Containers are also implemented.
 
 EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
 bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
-are read-only or read-write depending on settings. When configMaps and Secrets are updated the new
+are read-only or read-write depending on settings. When configMaps and Secrets are mutated the new
 contents are updated on disk.
 
 Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
@@ -106,14 +108,14 @@ Addressses are configured with one the systemk commandline flags: `--node-ip` an
 `--node-external-ip`, these may be IPv4 or IPv6. In the future this may get expanded into allow both
 (i.e. dual stack support). The primary Pod address will be the value from `--node-external-ip`.
 
-If `--node-ip` is not given, systemk will try to find a RFC 1918 address on the interfaces use the
+If `--node-ip` is not given, systemk will try to find a RFC 1918 address on the interfacesand uses the
 first one found.
 
 If `--node-external-ip` is not given, systemk will try to find a non-RFC 1918 address on the
-interfaces and use the first one found.
+interfaces and uses the first one found.
 
 If after all this one of the values is still not found, the other existing value will be copied, i.e
-internal == external in that case. If both were empty systemk exists with a fatal error.
+internal == external in that case. If both were empty systemk exits with a fatal error.
 
 ### Environment Variables
 
@@ -122,7 +124,6 @@ The following environment variables are made available to the units:
 * `HOSTNAME`, `KUBERNETES_SERVICE_PORT` and `KUBERNETES_SERVICE_HOST` (same as the kubelet).
 * `SYSTEMK_NODE_INTERNAL_IP` the internal IP address.
 * `SYSTEMK_NODE_EXTERNAL_IP` the external IP address.
-
 
 ### Using username in securityContext
 
@@ -136,7 +137,6 @@ spec:
 The primary group will be found by systemk and both a `User` and `Group` will be injected into the
 unit file. The files created on disk for the configMap/secrets/emptyDir will be made of the same
 user/group.
-
 
 ### Limitations
 
@@ -152,11 +152,12 @@ script to start it - this assumes `k3s` sits in "~/tmp/k3s". The script starts k
 Compile `systemk` and start it with.
 
 ~~~
-sudo ./systemk --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --enable-node-lease --disable-taint
+sudo ./systemk --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --disable-taint
 ~~~
 
-We need root to be allowed to install packages. Now a `k3s kubcetl get nodes` should show the
-virtual kubelet as a node:
+We need root to be allowed to install packages.
+
+Now a `k3s kubcetl get nodes` should show the virtual kubelet as a node:
 
 ~~~
 NAME    STATUS   ROLES   AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE            KERNEL-VERSION     CONTAINER-RUNTIME
