@@ -3,14 +3,17 @@ package systemd
 import (
 	"fmt"
 	"os"
+	"time"
 
-	vkmanager "github.com/virtual-kubelet/node-cli/manager"
 	"github.com/virtual-kubelet/node-cli/provider"
 	"github.com/virtual-kubelet/systemk/pkg/manager"
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/informers"
+	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 )
@@ -22,8 +25,10 @@ var unitDir = "/var/run/systemk"
 type P struct {
 	m   manager.Manager
 	pkg packages.PackageManager
-	rm  *vkmanager.ResourceManager
-	w   *Watcher
+
+	secretLister listersv1.SecretLister
+	cmLister     listersv1.ConfigMapLister
+	w            *Watcher
 
 	NodeInternalIP *corev1.NodeAddress
 	NodeExternalIP *corev1.NodeAddress
@@ -69,11 +74,11 @@ func New(cfg provider.InitConfig) (*P, error) {
 	p.ClusterDomain = cfg.KubeClusterDomain
 	p.daemonPort = cfg.DaemonPort
 
+	// Parse the kubeconfig, yet again, to gain access to the Host field,
+	// which has the value to set for the KUBERNETES_SERVICE_* Pod env vars.
 	if cfg.ConfigPath == "" {
 		return p, nil
 	}
-
-	// parse the config yet again, to gain access to the Host field, so we can properly set the environment variables
 	restConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: cfg.ConfigPath},
 		&clientcmd.ConfigOverrides{}).ClientConfig()
@@ -82,18 +87,29 @@ func New(cfg provider.InitConfig) (*P, error) {
 	}
 	p.kubernetesURL = restConfig.Host
 
+	// Set-up a clientset to be used in Secret and ConfigMap reconciliation.
 	clientset, err := nodeutil.ClientsetFromEnv(cfg.ConfigPath)
 	if err != nil {
 		return p, err
 	}
-	// Get new clientset.
-	w := newWatcher(clientset)
-	go func() {
-		if err := w.run(p); err != nil {
-			klog.Fatal(err)
-		}
-	}()
-	p.w = w
+
+	// Set the event handler functions for Secrets and ConfigMaps.
+	p.w = newWatcher()
+
+	// Set-up informers and extract listers to use when accessing Kubernetes resources.
+	informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute*1)
+
+	secretInformer := informerFactory.Core().V1().Secrets()
+	secretInformer.Informer().AddEventHandler(p.w.handlerFuncs(p))
+	p.secretLister = secretInformer.Lister()
+
+	cmInformer := informerFactory.Core().V1().ConfigMaps()
+	cmInformer.Informer().AddEventHandler(p.w.handlerFuncs(p))
+	p.cmLister = cmInformer.Lister()
+
+	informerFactory.Start(wait.NeverStop)
+	informerFactory.WaitForCacheSync(wait.NeverStop)
+
 	return p, nil
 }
 

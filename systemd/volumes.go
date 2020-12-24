@@ -66,7 +66,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll && which != volumeSecret {
 				continue
 			}
-			secret, err := p.rm.GetSecret(v.Secret.SecretName, pod.Namespace)
+			secret, err := p.secretLister.Secrets(pod.Namespace).Get(v.Secret.SecretName)
 			if v.Secret.Optional != nil && !*v.Secret.Optional && errors.IsNotFound(err) {
 				return nil, fmt.Errorf("secret %s is required by pod %s and does not exist", v.Secret.SecretName, pod.Name)
 			}
@@ -105,7 +105,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll && which != volumeConfigMap {
 				continue
 			}
-			configMap, err := p.rm.GetConfigMap(v.ConfigMap.Name, pod.Namespace)
+			configMap, err := p.cmLister.ConfigMaps(pod.Namespace).Get(v.ConfigMap.Name)
 			if v.ConfigMap.Optional != nil && !*v.ConfigMap.Optional && errors.IsNotFound(err) {
 				return nil, fmt.Errorf("configMap %s is required by pod %s and does not exist", v.ConfigMap.Name, pod.Name)
 			}

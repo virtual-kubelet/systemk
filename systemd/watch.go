@@ -5,101 +5,70 @@ import (
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 )
 
 // The Updater interface we will send notifications when configmaps and secrets are updated.
 type Updater interface {
-	UpdateConfigMap(context.Context, *corev1.Pod, *corev1.ConfigMap) error
-	UpdateSecret(context.Context, *corev1.Pod, *corev1.Secret) error
+	updateConfigMap(context.Context, *corev1.Pod, *corev1.ConfigMap) error
+	updateSecret(context.Context, *corev1.Pod, *corev1.Secret) error
 }
 
 // Watcher checks the API server for configMap and secret updates and notifies the provider.
 type Watcher struct {
-	mu        sync.RWMutex
-	clientset *kubernetes.Clientset
+	mu sync.RWMutex
 	// maps are indexed by "namespace.name"
 	configs map[string][]*corev1.Pod
 	secrets map[string][]*corev1.Pod
 }
 
-func newWatcher(clientset *kubernetes.Clientset) *Watcher {
+func newWatcher() *Watcher {
 	return &Watcher{
-		configs:   make(map[string][]*corev1.Pod),
-		secrets:   make(map[string][]*corev1.Pod),
-		clientset: clientset,
+		configs: make(map[string][]*corev1.Pod),
+		secrets: make(map[string][]*corev1.Pod),
 	}
 }
 
-func (w *Watcher) run(p Updater) error {
-	cmwatcher, err := w.clientset.CoreV1().ConfigMaps(corev1.NamespaceAll).Watch(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
+func (w *Watcher) handlerFuncs(p Updater) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			w.handleEvent(obj, p)
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			w.handleEvent(newObj, p)
+		},
+		DeleteFunc: nil, // Ignore for now. Pod deletion takes care of cleaning up.
 	}
-	swatcher, err := w.clientset.CoreV1().Secrets(corev1.NamespaceAll).Watch(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for {
-		select {
-		case event, ok := <-cmwatcher.ResultChan():
-			if !ok {
-				cmwatcher, _ = w.clientset.CoreV1().ConfigMaps(corev1.NamespaceAll).Watch(context.TODO(), metav1.ListOptions{})
-				break
-			}
-			cm, ok := event.Object.(*corev1.ConfigMap)
-			if !ok {
-				continue
-			}
-			// event.Type == watch.Deleted ??
-			if event.Type != watch.Added && event.Type != watch.Modified {
-				continue
-			}
-
-			namespace := cm.ObjectMeta.Namespace
-			name := cm.ObjectMeta.Name
-			w.mu.RLock()
-			pods := w.configs[namespace+"."+name]
-			w.mu.RUnlock()
-			if len(pods) != 0 {
-				klog.Infof("ConfigMap update %s/%s, notifying %d pods", namespace, name, len(pods))
-			}
-			for _, pod := range pods {
-				if err := p.UpdateConfigMap(context.TODO(), pod, cm); err != nil {
-					klog.Warningf("ConfigMap update %s/%s: %s", namespace, name, err)
-				}
-			}
-		case event, ok := <-swatcher.ResultChan():
-			if !ok {
-				swatcher, _ = w.clientset.CoreV1().Secrets(corev1.NamespaceAll).Watch(context.TODO(), metav1.ListOptions{})
-				break
-			}
-			s, ok := event.Object.(*corev1.Secret)
-			if !ok {
-				continue
-			}
-			// event.Type == watch.Deleted ??
-			if event.Type != watch.Added && event.Type != watch.Modified {
-				continue
-			}
-
-			namespace := s.ObjectMeta.Namespace
-			name := s.ObjectMeta.Name
-			w.mu.RLock()
-			pods := w.secrets[namespace+"."+name]
-			w.mu.RUnlock()
-			if len(pods) != 0 {
-				klog.Infof("Secret update %s/%s, notifying %d pods", namespace, name, len(pods))
-			}
-			for _, pod := range pods {
-				if err := p.UpdateSecret(context.TODO(), pod, s); err != nil {
-					klog.Warningf("Secret update %s/%s: %s", namespace, name, err)
-				}
+}
+func (w *Watcher) handleEvent(obj interface{}, upd Updater) {
+	switch v := obj.(type) {
+	case *corev1.Secret:
+		w.mu.RLock()
+		pods := w.secrets[v.Namespace+"."+v.Name]
+		w.mu.RUnlock()
+		if len(pods) != 0 {
+			klog.Infof("Secret update %s/%s, notifying %d pods", v.Namespace, v.Name, len(pods))
+		}
+		for _, pod := range pods {
+			if err := upd.updateSecret(context.TODO(), pod, v); err != nil {
+				klog.Warningf("Secret update %s/%s: %s", v.Namespace, v.Name, err)
 			}
 		}
+	case *corev1.ConfigMap:
+		w.mu.RLock()
+		pods := w.configs[v.Namespace+"."+v.Name]
+		w.mu.RUnlock()
+		if len(pods) != 0 {
+			klog.Infof("ConfigMap update %s/%s, notifying %d pods", v.Namespace, v.Name, len(pods))
+		}
+		for _, pod := range pods {
+			if err := upd.updateConfigMap(context.TODO(), pod, v); err != nil {
+				klog.Warningf("ConfigMap update %s/%s: %s", v.Namespace, v.Name, err)
+			}
+		}
+	default:
+		klog.Warningf("Ignoring unsupported type %T", v)
 	}
 }
 

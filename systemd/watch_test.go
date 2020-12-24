@@ -5,7 +5,7 @@ import (
 )
 
 func TestWatchUnWatch(t *testing.T) {
-	w := newWatcher(nil)
+	w := newWatcher()
 	pod, err := podFromFile("testdata/uptimed-config.yaml")
 	if err != nil {
 		t.Fatal(err)
