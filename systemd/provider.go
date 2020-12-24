@@ -70,7 +70,6 @@ func New(cfg provider.InitConfig) (*P, error) {
 		p.pkg = new(packages.NoopPackageManager)
 	}
 
-	p.rm = cfg.ResourceManager
 	p.ClusterDomain = cfg.KubeClusterDomain
 	p.daemonPort = cfg.DaemonPort
 
