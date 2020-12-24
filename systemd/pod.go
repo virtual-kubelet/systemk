@@ -22,7 +22,7 @@ import (
 
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	klog.Info("GetPod called")
-	stats, err := p.m.States(UnitPrefix(namespace, name))
+	stats, err := p.m.States(unitPrefix(namespace, name))
 	if err != nil {
 		klog.Infof("Failed to get states: %s", err)
 		return nil, nil
@@ -32,7 +32,7 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
-	states, err := p.m.States(Prefix)
+	states, err := p.m.States(prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		for _, v := range c.VolumeMounts {
 			dir, ok := vol[v.Name]
 			if !ok {
-				klog.Infof("failed to find volumeMount %s in the specific volumes, skpping", v.Name)
+				klog.Infof("failed to find volumeMount %s in the specific volumes, skipping", v.Name)
 				continue
 			}
 
@@ -108,7 +108,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			// * anything else don't touch: this likely makes the unit start, but then fail. (we may intercept this and return a decent message
 			//   so you can see this with events
 			//
-			// Cleanup of these directories is hard - systemd clean <unit> exists for doesn't assume other units are using this space.
 			_, err := os.Stat(v.MountPath)
 			switch os.IsNotExist(err) {
 			case true: // doesn't exist
@@ -136,7 +135,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		// TODO(): parse c.Image for tag to get version. Check ImagePullAways to reinstall??
+		// TODO(): parse c.Image for tag to get version. Check ImagePullAlways to reinstall??
 		// if we're downloading the image, the image name needs cleaning
 		installed, err := p.pkg.Install(c.Image, "")
 		if err != nil {
@@ -144,7 +143,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			return err
 		}
 		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
-		name := PodToUnitName(pod, c.Name)
+		name := podToUnitName(pod, c.Name)
 		if installed {
 			p.m.Mask(c.Image + unit.ServiceSuffix)
 		}
@@ -186,7 +185,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		// keep the unit around, the control plane where clear it with a DeletePod.
+		// keep the unit around, until DeletePod is triggered.
 		// this is also for us to return the state even after the unit left the stage.
 		uf = uf.Overwrite("Service", "RemainAfterExit", "true")
 
@@ -270,7 +269,7 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	klog.Infof("GetContainerLogs called")
 
-	unitname := UnitPrefix(namespace, podName) + separator + containerName
+	unitname := unitPrefix(namespace, podName) + separator + containerName
 	args := []string{"-u", unitname}
 	cmd := exec.Command("journalctl", args...)
 	// returns the buffers? What about following, use pipes here or something?
@@ -286,18 +285,25 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 
 // DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("DeletePod called")
+	klog.Infof("DeletePod called for pod %q/%q", pod.Namespace, pod.Name)
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
-		name := PodToUnitName(pod, c.Name)
+		name := podToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
-			klog.Warningf("Failed to triggger top: %s", err)
+			klog.Warningf("Failed to trigger top: %s", err)
 		}
 		if err := p.m.Unload(name); err != nil {
 			klog.Warningf("Failed to unload: %s", err)
 		}
+		klog.Infof("Deleted unit [%q] successfully", name)
 	}
 	p.m.Reload()
 	p.w.Unwatch(pod)
+
+	// Clean-up volumes.
+	if err := cleanPodEphemeralVolumes(string(pod.UID)); err != nil {
+		klog.Warningf("failed to clean-up volumes for pod %q/%q: %s", pod.Namespace, pod.Name, err)
+	}
+
 	return nil
 }
 
@@ -311,12 +317,12 @@ func (p *P) updateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret)
 	return err
 }
 
-func PodToUnitName(pod *corev1.Pod, containerName string) string {
-	return UnitPrefix(pod.Namespace, pod.Name) + separator + containerName + unit.ServiceSuffix
+func podToUnitName(pod *corev1.Pod, containerName string) string {
+	return unitPrefix(pod.Namespace, pod.Name) + separator + containerName + unit.ServiceSuffix
 }
 
-func UnitPrefix(namespace, podName string) string {
-	return Prefix + separator + namespace + separator + podName
+func unitPrefix(namespace, podName string) string {
+	return prefix + separator + namespace + separator + podName
 }
 
 func Image(name string) string {
@@ -352,8 +358,8 @@ func Namespace(name string) string {
 }
 
 const (
-	// Prefix the unit file prefix we used.
-	Prefix    = "systemk"
+	// prefix the unit file prefix we used.
+	prefix    = "systemk"
 	separator = "."
 )
 

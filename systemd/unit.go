@@ -23,7 +23,7 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 		return nil
 	}
 	name := ""
-	// Pick a random unit, the things we care about should be identical btween them.
+	// Pick a random unit, the things we care about should be identical between them.
 	// We might need to pick the "correct" one at some point.
 	for k := range stats {
 		name = k

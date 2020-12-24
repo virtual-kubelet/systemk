@@ -59,6 +59,8 @@ func main() {
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
 	o.NodeName = system.Hostname()
+	o.EnableNodeLease = true
+
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
 		cli.WithPersistentFlags(flags),

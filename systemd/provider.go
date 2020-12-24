@@ -32,10 +32,10 @@ type P struct {
 
 	NodeInternalIP *corev1.NodeAddress
 	NodeExternalIP *corev1.NodeAddress
-	DaemonPort     int32
+	ClusterDomain  string
 
-	ClusterDomain string
-	Host          string
+	daemonPort    int32
+	kubernetesURL string
 }
 
 // New returns a new systemd provider.
@@ -70,8 +70,8 @@ func New(cfg provider.InitConfig) (*P, error) {
 		p.pkg = new(packages.NoopPackageManager)
 	}
 
-	p.DaemonPort = cfg.DaemonPort
 	p.ClusterDomain = cfg.KubeClusterDomain
+	p.daemonPort = cfg.DaemonPort
 
 	// Parse the kubeconfig, yet again, to gain access to the Host field,
 	// which has the value to set for the KUBERNETES_SERVICE_* Pod env vars.
@@ -84,8 +84,7 @@ func New(cfg provider.InitConfig) (*P, error) {
 	if err != nil {
 		return p, err
 	}
-
-	p.Host = restConfig.Host
+	p.kubernetesURL = restConfig.Host
 
 	// Set-up a clientset to be used in Secret and ConfigMap reconciliation.
 	clientset, err := nodeutil.ClientsetFromEnv(cfg.ConfigPath)
