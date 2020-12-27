@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -66,7 +65,7 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 		},
 		ObjectMeta: om,
 		Spec: corev1.PodSpec{
-			NodeName:       system.Hostname(),
+			NodeName:       p.nodename,
 			Volumes:        []corev1.Volume{},
 			Containers:     containers,
 			InitContainers: initContainers,

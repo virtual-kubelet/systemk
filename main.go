@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -43,6 +44,7 @@ func main() {
 		nodeIP   string
 		nodeEIP  string
 	)
+
 	flags := pflag.NewFlagSet("client", pflag.ContinueOnError)
 	// these options need to be make inline with k3s or make clear they afffect logs, certfile and keyfile is too short
 	flags.StringVar(&certFile, "certfile", "", "certfile")
@@ -58,12 +60,31 @@ func main() {
 	}
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
-	o.NodeName = system.Hostname()
+
 	o.EnableNodeLease = true
 
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
 		cli.WithPersistentFlags(flags),
+		// Register hostname flag default value callback.
+		cli.WithPersistentPreRunCallback(func() error {
+			// Ensure o.NodeName is set.
+			//
+			// Setting the Node name is computed in the following order:
+			// 1. flag --nodename, or if not set
+			// 2. environment variable HOSTNAME, or if not set
+			// 3. the hostname of the machine where systemk is running.
+			if flag := flags.Lookup("nodename"); flag != nil {
+				if !flag.Changed {
+					var defaultHostname string
+					if defaultHostname = os.Getenv("HOSTNAME"); defaultHostname == "" {
+						defaultHostname = system.Hostname()
+					}
+					o.NodeName = defaultHostname
+				}
+			}
+			return nil
+		}),
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
 		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-
-	"github.com/virtual-kubelet/systemk/pkg/system"
 )
 
 // defaultEnvironment returns the environment that the kubelet uses.
@@ -20,11 +18,11 @@ func (p *P) defaultEnvironment() []string {
 		host, port, _ = net.SplitHostPort(url.Host)
 	}
 
-	env = append(env, fmt.Sprintf("HOSTNAME=%s", system.Hostname()))
+	env = append(env, fmt.Sprintf("HOSTNAME=%s", p.nodename))
 	env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_PORT=%s", port))
 	env = append(env, fmt.Sprintf("KUBERNETES_SERVICE_HOST=%s", host))
 
-	// These are systemk spefific environment variables. TODO(miek): should this be done at all?
+	// These are systemk specific environment variables. TODO(miek): should this be done at all?
 	// SYSTEMK_NODE_INTERNAL_IP: internal address of the node
 	// SYSTEMK_NODE_EXTERNAL_IP: external address of the node
 	env = append(env, mkEnvVar("NODE_INTERNAL_IP", p.NodeInternalIP.Address))
