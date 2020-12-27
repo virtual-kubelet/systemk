@@ -61,6 +61,7 @@ func main() {
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
 
+	// Enforce usage of Node Leases.
 	o.EnableNodeLease = true
 
 	node, err := cli.New(ctx,

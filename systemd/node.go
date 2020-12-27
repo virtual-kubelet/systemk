@@ -28,7 +28,7 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.ObjectMeta = metav1.ObjectMeta{
 		Name: p.nodename,
 		Labels: map[string]string{
-			"type":                              "virtual-kubelet",
+			"node.kubernetes.io/instance-type":  "systemk",
 			"kubernetes.io/os":                  defaultOS,
 			"kubernetes.io/hostname":            p.nodename,
 			corev1.LabelZoneFailureDomainStable: "localhost",
