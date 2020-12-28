@@ -61,15 +61,15 @@ func main() {
 	o.Provider = "systemd"
 	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
 
-	// Enforce usage of Node Leases.
-	o.EnableNodeLease = true
-
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
 		cli.WithPersistentFlags(flags),
-		// Register hostname flag default value callback.
+		// Validate configuration after flag parsing.
 		cli.WithPersistentPreRunCallback(func() error {
-			// Ensure o.NodeName is set.
+			// Enforce usage of Node Leases API.
+			o.EnableNodeLease = true
+
+			// Ensure Node name is set.
 			//
 			// Setting the Node name is computed in the following order:
 			// 1. flag --nodename, or if not set
