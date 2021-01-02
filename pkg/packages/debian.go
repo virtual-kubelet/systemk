@@ -80,6 +80,7 @@ func policy() (string, error) {
 	if err := os.Chmod(f.Name(), 0755); err != nil {
 		return "", err
 	}
+	f.Close() // prevent "text file busy"
 	return f.Name(), nil
 }
 
