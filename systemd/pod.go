@@ -21,7 +21,7 @@ import (
 // the container/unit start fail, which will be correctly picked up by the control plane.
 
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	klog.Info("GetPod called")
+	klog.Infof("GetPod called for pod %q/%q", namespace, name)
 	stats, err := p.m.States(unitPrefix(namespace, name))
 	if err != nil {
 		klog.Infof("Failed to get states: %s", err)
@@ -32,6 +32,7 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
+	klog.Info("GetPods called")
 	states, err := p.m.States(prefix)
 	if err != nil {
 		return nil, err
@@ -62,7 +63,7 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Info("CreatedPod called")
+	klog.Infof("CreatePod called for pod %q/%q", pod.Namespace, pod.Name)
 
 	vol, err := p.volumes(pod, volumeAll)
 	if err != nil {
@@ -247,15 +248,15 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *P) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+	klog.Infof("RunInContainer called for pod %q/%q/%q", namespace, name, container)
 	// Should we just try to start something? But with what user???
-	klog.Infof("receive RunInContainer %q\n", container)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running.
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	klog.Infof("GetPodStatus called")
+	klog.Infof("GetPodStatus called for pod %q/%q", namespace, name)
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
@@ -266,10 +267,10 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
-func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	klog.Infof("GetContainerLogs called")
+func (p *P) GetContainerLogs(ctx context.Context, namespace, name, container string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
+	klog.Infof("GetContainerLogs called for pod %q/%q/%q", namespace, name, container)
 
-	unitname := unitPrefix(namespace, podName) + separator + containerName
+	unitname := unitPrefix(namespace, name) + separator + container
 	args := []string{"-u", unitname}
 	cmd := exec.Command("journalctl", args...)
 	// returns the buffers? What about following, use pipes here or something?
@@ -279,7 +280,7 @@ func (p *P) GetContainerLogs(ctx context.Context, namespace, podName, containerN
 
 // UpdatePod is a noop,
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("UpdatePod called - not implemented")
+	klog.Infof("UpdatePod called for pod %q/%q", pod.Namespace, pod.Name)
 	return nil
 }
 
