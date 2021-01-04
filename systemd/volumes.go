@@ -55,7 +55,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			}
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, emptyDir)
-			if err := isBelow(p.topdirs, dir); err != nil {
+			if err := isBelow(p.Topdirs, dir); err != nil {
 				return nil, err
 			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
@@ -82,7 +82,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, secretDir)
-			if err := isBelow(p.topdirs, dir); err != nil {
+			if err := isBelow(p.Topdirs, dir); err != nil {
 				return nil, err
 			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
@@ -124,7 +124,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, configmapDir)
-			if err := isBelow(p.topdirs, dir); err != nil {
+			if err := isBelow(p.Topdirs, dir); err != nil {
 				return nil, err
 			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {

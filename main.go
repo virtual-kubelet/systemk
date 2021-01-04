@@ -77,7 +77,7 @@ func main() {
 			p.SetNodeIPs(nodeIP, nodeEIP)
 			klog.Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
 
-			p.topdirs = topdirs
+			p.Topdirs = topdirs
 			if certFile == "" || keyFile == "" {
 				klog.Info("No certificates found, disabling GetContainerLogs")
 				return p, nil
