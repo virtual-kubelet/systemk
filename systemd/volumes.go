@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,6 +45,8 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll {
 				continue
 			}
+			// should this be v.Path? We should make this writeable
+			// We should also check the allowed paths here. TODO(miek).
 			vol[v.Name] = ""
 
 		case v.EmptyDir != nil:
@@ -52,6 +55,9 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			}
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, emptyDir)
+			if err := isBelow(p.topdirs, dir); err != nil {
+				return nil, err
+			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
@@ -76,6 +82,9 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, secretDir)
+			if err := isBelow(p.topdirs, dir); err != nil {
+				return nil, err
+			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
@@ -115,6 +124,9 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 			dir := filepath.Join(varrun, id)
 			dir = filepath.Join(dir, configmapDir)
+			if err := isBelow(p.topdirs, dir); err != nil {
+				return nil, err
+			}
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
@@ -207,9 +219,31 @@ func chown(name, uid, gid string) error {
 	return os.Chown(name, int(uidn), int(gidn))
 }
 
-const dirPerms = 02750
-
 func cleanPodEphemeralVolumes(podId string) error {
 	podEphemeralVolumes := filepath.Join(varrun, podId)
 	return os.RemoveAll(podEphemeralVolumes)
 }
+
+// isBelowPath returns true if path is below top.
+func isBelowPath(top, path string) bool {
+	x, err := filepath.Rel(top, path)
+	if err != nil {
+		return false
+	}
+	if x == "." { // same level
+		return false
+	}
+	return !strings.Contains(x, "..")
+}
+
+// isBelowPath checks if path falls below any of the path in dirs.
+func isBelow(dirs []string, path string) error {
+	for _, d := range dirs {
+		if isBelowPath(d, path) {
+			return nil
+		}
+	}
+	return fmt.Errorf("path %q, doesn't fall under any paths in %s", path, dirs)
+}
+
+const dirPerms = 02750

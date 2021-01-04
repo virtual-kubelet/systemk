@@ -12,12 +12,14 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/manager"
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
 const dir = "testdata/provider"
 
 func TestProviderPodSpecUnits(t *testing.T) {
+	klog.SetLogger(&noopLogger{})
 	testFiles, err := ioutil.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("could not read %s: %q", dir, err)

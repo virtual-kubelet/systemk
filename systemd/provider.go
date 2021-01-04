@@ -36,6 +36,7 @@ type P struct {
 
 	daemonPort    int32
 	kubernetesURL string
+	topdirs       []string
 }
 
 // New returns a new systemd provider.
