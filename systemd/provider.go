@@ -33,6 +33,7 @@ type P struct {
 	NodeInternalIP *corev1.NodeAddress
 	NodeExternalIP *corev1.NodeAddress
 	ClusterDomain  string
+	Topdirs        []string
 
 	daemonPort    int32
 	kubernetesURL string

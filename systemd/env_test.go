@@ -14,7 +14,6 @@ func TestProviderIPEnvironment(t *testing.T) {
 	env := p.defaultEnvironment()
 	found := 0
 	for _, e := range env {
-		println(e)
 		if e == "SYSTEMK_NODE_INTERNAL_IP=192.168.1.1" {
 			found++
 		}

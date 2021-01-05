@@ -42,6 +42,7 @@ func main() {
 		keyFile  string
 		nodeIP   string
 		nodeEIP  string
+		topdirs  []string
 	)
 	flags := pflag.NewFlagSet("client", pflag.ContinueOnError)
 	// these options need to be make inline with k3s or make clear they afffect logs, certfile and keyfile is too short
@@ -49,6 +50,7 @@ func main() {
 	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
 	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node")
 	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node")
+	flags.StringSliceVarP(&topdirs, "dir", "d", []string{"/var"}, "Only allow mounts below these directories")
 
 	ctx := cli.ContextWithCancelOnSignal(context.Background())
 
@@ -75,6 +77,7 @@ func main() {
 			p.SetNodeIPs(nodeIP, nodeEIP)
 			klog.Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
 
+			p.Topdirs = topdirs
 			if certFile == "" || keyFile == "" {
 				klog.Info("No certificates found, disabling GetContainerLogs")
 				return p, nil
