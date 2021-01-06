@@ -209,3 +209,138 @@ uptimed   1/1     Running   0          7m42s
 ~~~
 
 You can then delete the pod.
+
+## Testing
+
+### Set-up Node authentication
+
+`systemk` impersonates a Node and, as such, can identify itself through a TLS
+client certificate.
+Let's set that up.
+
+1. Install `cert-manager`, required to provision a TLS certificate
+that will later be used when authenticating `systemk` as a Kubernetes Node.
+
+    ```bash
+    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
+    ```
+
+1. Expose private CA resources as a Secret, a requirement for the next step.
+
+    1. If using `kind`:
+    
+       ```bash
+       docker exec -e KUBECONFIG=/etc/kubernetes/admin.conf kind-control-plane sh -c \
+          'kubectl -n cert-manager create secret tls priv-ca \
+          --cert=/etc/kubernetes/pki/ca.crt \
+          --key=/etc/kubernetes/pki/ca.key'
+       ```
+
+   1. If using `minikube`:
+
+      ```bash
+      minikube ssh
+      
+      sudo /var/lib/minikube/binaries/v1.20.1/kubectl \
+        --kubeconfig /etc/kubernetes/admin.conf \
+        -n cert-manager create secret tls priv-ca \
+        --cert=/var/lib/minikube/certs/ca.crt \
+        --key=/var/lib/minikube/certs/ca.key
+      
+      exit
+      ```
+
+1. Create a cluster-wide certificate issuer that re-uses the cluster PKI.
+
+    ```bash
+    cat <<EOF | kubectl apply -f -
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: priv-ca-issuer
+    spec:
+      ca:
+        secretName: priv-ca
+    EOF
+    
+    kubectl wait --for=condition=Ready --timeout=1m clusterissuer priv-ca-issuer
+    ```
+
+1. Create a certificate signing request that `cert-manager` can sign with the
+   CA setup during your Kubernetes cluster bootstrap.
+
+    ```bash
+    NODENAME=systemk
+    cat <<EOF | kubectl apply -f -
+    apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: $NODENAME
+      namespace: default
+    spec:
+      secretName: $NODENAME-tls
+      duration: 8760h # 1 year
+      renewBefore: 4380h # 6 months
+      subject:
+        organizations:
+        - system:nodes
+      commonName: system:node:$NODENAME
+      issuerRef:
+        name: priv-ca-issuer
+        kind: ClusterIssuer
+    EOF
+    
+    kubectl wait --for=condition=Ready --timeout=1m certificate $NODENAME
+    ```
+
+1. Initialize a _kubeconfig_ file `systemk` will rely on.
+   
+   1. If using `kind`:
+
+      ```bash
+      rm -f $NODENAME.kubeconfig
+      kind get kubeconfig > $NODENAME.kubeconfig
+      
+      kubectl --kubeconfig=$NODENAME.kubeconfig config unset contexts.kind-kind
+      kubectl --kubeconfig=$NODENAME.kubeconfig config unset users.kind-kind
+      ```
+
+   1. If using `minikube`:
+
+      ```bash
+      rm -f $NODENAME.kubeconfig
+      KUBECONFIG=$NODENAME.kubeconfig minikube update-context
+       
+      kubectl --kubeconfig=$NODENAME.kubeconfig config unset contexts.minikube
+      kubectl --kubeconfig=$NODENAME.kubeconfig config unset users.minikube
+      ```
+
+1. Extract the signed certificate and respective private key, and populate the
+   _kubeconfig_ file, appropriately.
+   
+   ```bash
+   kubectl get secret $NODENAME-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > $NODENAME.crt
+   kubectl get secret $NODENAME-tls -o jsonpath='{.data.tls\.key}' | base64 -d > $NODENAME.key
+    
+   kubectl --kubeconfig=$NODENAME.kubeconfig config set-credentials $NODENAME \
+    --client-certificate=$NODENAME.crt \
+    --client-key=$NODENAME.key
+    
+   kubectl --kubeconfig=$NODENAME.kubeconfig config set-context $NODENAME --cluster=minikube --user=$NODENAME
+   kubectl --kubeconfig=$NODENAME.kubeconfig config use-context $NODENAME
+   ```
+### Running the Node
+
+1. Allow `systemk` to view ConfigMaps and Secrets across the cluster.
+   This is far from ideal but works for now.
+   
+   ```bash
+   kubectl create clusterrolebinding $NODENAME-view --clusterrole=system:node --user=system:node:$NODENAME
+   ```
+
+1. Finally, start `systemk`.
+
+   ```bash
+   NODENAME=systemk
+   ./systemk --kubeconfig=$NODENAME.kubeconfig --nodename=$NODENAME
+   ```
