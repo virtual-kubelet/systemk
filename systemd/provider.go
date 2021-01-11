@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -41,7 +41,7 @@ type P struct {
 }
 
 // New returns a new systemd provider.
-func New(cfg provider.InitConfig) (*P, error) {
+func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 	if err := os.MkdirAll(unitDir, 0750); err != nil {
 		return nil, err
 	}
@@ -109,8 +109,8 @@ func New(cfg provider.InitConfig) (*P, error) {
 	cmInformer.Informer().AddEventHandler(p.w.handlerFuncs(p))
 	p.cmLister = cmInformer.Lister()
 
-	informerFactory.Start(wait.NeverStop)
-	informerFactory.WaitForCacheSync(wait.NeverStop)
+	informerFactory.Start(ctx.Done())
+	informerFactory.WaitForCacheSync(ctx.Done())
 
 	return p, nil
 }
