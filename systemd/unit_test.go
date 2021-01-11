@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -24,7 +25,7 @@ func TestNewUnit(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // clean up
 	unitDir = dir
-	p, err := New(provider.InitConfig{})
+	p, err := New(context.TODO(), provider.InitConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
