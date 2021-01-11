@@ -35,6 +35,7 @@ type P struct {
 	ClusterDomain  string
 	Topdirs        []string
 
+	nodename      string
 	daemonPort    int32
 	kubernetesURL string
 }
@@ -72,6 +73,7 @@ func New(cfg provider.InitConfig) (*P, error) {
 	}
 
 	p.ClusterDomain = cfg.KubeClusterDomain
+	p.nodename = cfg.NodeName
 	p.daemonPort = cfg.DaemonPort
 
 	// Parse the kubeconfig, yet again, to gain access to the Host field,

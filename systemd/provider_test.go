@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,8 +28,7 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	p.pkg = &packages.NoopPackageManager{}
 	p.NodeInternalIP = &corev1.NodeAddress{Address: "192.168.1.1", Type: corev1.NodeInternalIP}
 	p.NodeExternalIP = &corev1.NodeAddress{Address: "172.16.0.1", Type: corev1.NodeExternalIP}
-
-	os.Setenv("HOSTNAME", "localhost")
+	p.nodename = "localhost"
 
 	for _, f := range testFiles {
 		if f.IsDir() {

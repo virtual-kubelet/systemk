@@ -5,4 +5,5 @@
 
 # binaries and other artifacts
 systemk
+systemk.*
 vendor

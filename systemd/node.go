@@ -26,13 +26,13 @@ func (p *P) ConfigureNode(ctx context.Context, node *corev1.Node) {
 	node.Status.NodeInfo.OSImage = system.Image()
 	node.Status.NodeInfo.ContainerRuntimeVersion = system.Version()
 	node.ObjectMeta = metav1.ObjectMeta{
-		Name: system.Hostname(),
+		Name: p.nodename,
 		Labels: map[string]string{
-			"type":                              "virtual-kubelet",
+			"node.kubernetes.io/instance-type":  "systemk",
 			"kubernetes.io/os":                  defaultOS,
-			"kubernetes.io/hostname":            system.Hostname(),
+			"kubernetes.io/hostname":            p.nodename,
 			corev1.LabelZoneFailureDomainStable: "localhost",
-			corev1.LabelZoneRegionStable:        system.Hostname(),
+			corev1.LabelZoneRegionStable:        p.nodename,
 		},
 	}
 }
