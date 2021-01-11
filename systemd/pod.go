@@ -79,6 +79,14 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		isInit := i < len(pod.Spec.InitContainers)
 		klog.Infof("Processing container %d (init=%t)", i, isInit)
 
+		// TODO(): parse c.Image for tag to get version. Check ImagePullAlways to reinstall??
+		// if we're downloading the image, the image name needs cleaning
+		installed, err := p.pkg.Install(c.Image, "")
+		if err != nil {
+			klog.Infof("Failed to install package %q: %s", c.Image, err)
+			return err
+		}
+
 		bindmounts := []string{}
 		bindmountsro := []string{}
 		rwpaths := []string{}
@@ -136,13 +144,6 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		// TODO(): parse c.Image for tag to get version. Check ImagePullAlways to reinstall??
-		// if we're downloading the image, the image name needs cleaning
-		installed, err := p.pkg.Install(c.Image, "")
-		if err != nil {
-			klog.Infof("Failed to install package %q: %s", c.Image, err)
-			return err
-		}
 		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
 		name := podToUnitName(pod, c.Name)
 		if installed {
