@@ -84,14 +84,6 @@ exists we leave the existing unit alone. If the install doesn't come with a unit
 install `zsh`) we will synthesize a small service unit file; for this to work the podSpec need to
 (at) least define a command to run.
 
-Now, while fiddling with this, I noticed setting up a Debian repository is an annoyingly amount of
-work and the signing of packages requires GPG and manually inputting secrets. This is why a
-short-cut for installing packages has been added. If the image name starts with `deb://` it is
-assumed an URL and the package is fetched from there and installed. The image name is the first
-string up until the `_` in the debian package name:
-`deb://example.org/tmp/coredns_1.7.1-bla_amd64.deb` will download the package from that URL and
-`coredns` will be the package name.
-
 CreatePod call we call out to systemd to create a unit per container in the pod. Each unit will
 be named `systemk.<pod-namespace>.<pod-name>.<image-name>.service`. If a command is given it will
 replace the first word of `ExecStart` and leave any options there. If `args` are also given the
@@ -101,6 +93,26 @@ the options/args will be replaced.
 We store a bunch of k8s meta data inside the unit in a `[X-kubernetes]` section. Whenever we want to
 know a pod state systemk will query systemd and read the unit file back. This way we know the status
 and have access to all the meta data, like pod UID and if the unit is an init container.
+
+### Specifying Images
+
+In general the image you specify is a (distro) package, i.e. `bash-$version.deb`. But there are
+alternatives that can be used and give you some flexibility.
+
+#### Fetching Image Remotely
+
+If the image name starts with `https://` it is assumed an URL and the package is fetched from there
+and installed. The image name is the first string up until the `_` in the package name:
+`https://example.org/tmp/coredns_1.7.1-bla_amd64.deb` will download the package from that URL and
+`coredns` will be the package name.
+
+#### Binary Exists in File System
+
+If the image name starts with a `/` it's assumed to be a path to a binary that exists on the system,
+nothing is installed in that case. Basically this tells systemk that the image is not used. This can
+serve as documentation. It's likely command and/or args in the podspec will reference the same path.
+
+This mode helps in running system as a non-root user.
 
 ### Addresses
 
@@ -233,7 +245,7 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
 1. Expose private CA resources as a Secret, a requirement for the next step.
 
     1. If using `kind`:
-    
+
        ```bash
        docker exec -e KUBECONFIG=/etc/kubernetes/admin.conf kind-control-plane sh -c \
           'kubectl -n cert-manager create secret tls priv-ca \
@@ -245,13 +257,13 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
 
       ```bash
       minikube ssh
-      
+
       sudo /var/lib/minikube/binaries/v1.20.1/kubectl \
         --kubeconfig /etc/kubernetes/admin.conf \
         -n cert-manager create secret tls priv-ca \
         --cert=/var/lib/minikube/certs/ca.crt \
         --key=/var/lib/minikube/certs/ca.key
-      
+
       exit
       ```
 
@@ -267,7 +279,7 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
       ca:
         secretName: priv-ca
     EOF
-    
+
     kubectl wait --for=condition=Ready --timeout=1m clusterissuer priv-ca-issuer
     ```
 
@@ -294,18 +306,18 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
         name: priv-ca-issuer
         kind: ClusterIssuer
     EOF
-    
+
     kubectl wait --for=condition=Ready --timeout=1m certificate $NODENAME
     ```
 
 1. Initialize a _kubeconfig_ file `systemk` will rely on.
-   
+
    1. If using `kind`:
 
       ```bash
       rm -f $NODENAME.kubeconfig
       kind get kubeconfig > $NODENAME.kubeconfig
-      
+
       kubectl --kubeconfig=$NODENAME.kubeconfig config unset contexts.kind-kind
       kubectl --kubeconfig=$NODENAME.kubeconfig config unset users.kind-kind
       ```
@@ -315,22 +327,22 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
       ```bash
       rm -f $NODENAME.kubeconfig
       KUBECONFIG=$NODENAME.kubeconfig minikube update-context
-       
+
       kubectl --kubeconfig=$NODENAME.kubeconfig config unset contexts.minikube
       kubectl --kubeconfig=$NODENAME.kubeconfig config unset users.minikube
       ```
 
 1. Extract the signed certificate and respective private key, and populate the
    _kubeconfig_ file, appropriately.
-   
+
    ```bash
    kubectl get secret $NODENAME-tls -o jsonpath='{.data.tls\.crt}' | base64 -d > $NODENAME.crt
    kubectl get secret $NODENAME-tls -o jsonpath='{.data.tls\.key}' | base64 -d > $NODENAME.key
-    
+
    kubectl --kubeconfig=$NODENAME.kubeconfig config set-credentials $NODENAME \
     --client-certificate=$NODENAME.crt \
     --client-key=$NODENAME.key
-    
+
    kubectl --kubeconfig=$NODENAME.kubeconfig config set-context $NODENAME --cluster=minikube --user=$NODENAME
    kubectl --kubeconfig=$NODENAME.kubeconfig config use-context $NODENAME
    ```
@@ -338,7 +350,7 @@ that will later be used when authenticating `systemk` as a Kubernetes Node.
 
 1. Allow `systemk` to view ConfigMaps and Secrets across the cluster.
    This is far from ideal but works for now.
-   
+
    ```bash
    kubectl create clusterrolebinding $NODENAME-view --clusterrole=system:node --user=system:node:$NODENAME
    ```
