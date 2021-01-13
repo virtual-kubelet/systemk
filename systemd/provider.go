@@ -56,6 +56,10 @@ func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 	case "debian", "ubuntu":
 		p.pkg = new(packages.DebianPackageManager)
 
+		// Check if we're root and otherwise skip this step.
+		if os.Geteuid() != 0 {
+			break
+		}
 		// Just installed pre-requisites instead of pointing to the docs.
 		klog.Infof("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
 		ok, err := p.pkg.Install("policyrcd-script-zg2", "")
