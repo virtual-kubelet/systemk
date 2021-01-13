@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
@@ -144,7 +145,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			}
 		}
 
-		c.Image = p.pkg.Clean(c.Image) // clean up the image if fetched with https
+		c.Image = packages.Clean(c.Image) // clean up the image if fetched with http(s)
 		name := podToUnitName(pod, c.Name)
 		if installed {
 			p.m.Mask(c.Image + unit.ServiceSuffix)

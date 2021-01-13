@@ -112,15 +112,15 @@ If the image name starts with a `/` it's assumed to be a path to a binary that e
 nothing is installed in that case. Basically this tells systemk that the image is not used. This can
 serve as documentation. It's likely command and/or args in the podspec will reference the same path.
 
-This mode helps in running system as a non-root user.
+This mode helps in running systemk as a non-root user.
 
 ### Addresses
 
-Addressses are configured with one the systemk commandline flags: `--node-ip` and
+Addresses are configured with one the systemk command line flags: `--node-ip` and
 `--node-external-ip`, these may be IPv4 or IPv6. In the future this may get expanded into allow both
 (i.e. dual stack support). The primary Pod address will be the value from `--node-external-ip`.
 
-If `--node-ip` is not given, systemk will try to find a RFC 1918 address on the interfacesand uses the
+If `--node-ip` is not given, systemk will try to find a RFC 1918 address on the interfaces and uses the
 first one found.
 
 If `--node-external-ip` is not given, systemk will try to find a non-RFC 1918 address on the

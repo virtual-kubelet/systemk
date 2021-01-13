@@ -41,16 +41,18 @@ func fetch(pkg, version string) (string, error) {
 	return tmppkg.Name(), nil
 }
 
-// clean checks the string pkg and returns the package name. Everything up to the first _ is the package name.
+// Clean checks the string pkg and returns the package name. Everything up to the first _ is the package name after
+// the scheme (https:// or http://).
+// If the string is an absolute path, the base is returned as the package name.
 // On error the pkg is returned as-is.
-func clean(pkg string) string {
-	if !strings.HasPrefix(pkg, "http://") {
-		return pkg
-	}
-	if !strings.HasPrefix(pkg, "https://") {
-		return pkg
+func Clean(pkg string) string {
+	if path.IsAbs(pkg) {
+		return path.Base(pkg)
 	}
 
+	if !strings.HasPrefix(pkg, "http://") && !strings.HasPrefix(pkg, "https://") {
+		return pkg
+	}
 	u, err := url.Parse(pkg)
 	if err != nil {
 		return pkg

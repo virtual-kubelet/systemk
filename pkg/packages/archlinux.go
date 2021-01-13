@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/virtual-kubelet/systemk/pkg/unit"
+	"k8s.io/klog/v2"
 )
 
 // ArchlinuxPackageManager implemtents the PackageManager interface for an Archlinux system
@@ -26,6 +28,11 @@ func (p *ArchlinuxPackageManager) Setup() error {
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *ArchlinuxPackageManager) Install(pkg, version string) (bool, error) {
+	klog.Infof("Checking if %q is installed", Clean(pkg))
+	if path.IsAbs(pkg) {
+		return false, nil
+	}
+
 	checkCmdArgs := []string{"-Qi", pkg}
 	checkCmd := exec.Command(pacmanCommand, checkCmdArgs...)
 

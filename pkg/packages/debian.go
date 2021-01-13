@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/virtual-kubelet/systemk/pkg/unit"
@@ -25,8 +26,11 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (bool, error) {
-	klog.Infof("Checking if %q is installed", clean(pkg))
-	checkCmd := exec.Command(dpkgCommand, "-s", clean(pkg))
+	klog.Infof("Checking if %q is installed", Clean(pkg))
+	if path.IsAbs(pkg) {
+		return false, nil
+	}
+	checkCmd := exec.Command(dpkgCommand, "-s", Clean(pkg))
 	if err := checkCmd.Run(); err == nil {
 		return false, nil
 	}
