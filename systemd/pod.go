@@ -175,17 +175,15 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			uf = uf.Overwrite("Service", "Group", gid)
 		}
 
-		switch isInit {
-		case true:
+		// Treat initContainer differently.
+		if isInit {
 			uf = uf.Overwrite("Service", "Type", "oneshot") // no restarting
 			uf = uf.Insert(kubernetesSection, "InitContainer", "true")
-			if previousUnit != "" {
-				uf = uf.Insert("Unit", "After", previousUnit)
-			}
-		case false:
-			if previousUnit != "" {
-				uf = uf.Insert("Unit", "After", previousUnit)
-			}
+		}
+
+		// Handle unit dependencies.
+		if previousUnit != "" {
+			uf = uf.Insert("Unit", "After", previousUnit)
 		}
 
 		// keep the unit around, until DeletePod is triggered.
@@ -224,6 +222,8 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		for _, env := range p.defaultEnvironment() {
 			uf = uf.Insert("Service", "Environment", env)
 		}
+
+		// For logging purposes only.
 		init := ""
 		if isInit {
 			init = "init-"
