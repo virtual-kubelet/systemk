@@ -4,10 +4,11 @@ import (
 	"context"
 	"sync"
 
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog/v2"
 )
 
 // The updater notifies pods when related configmaps and secrets change.
@@ -58,11 +59,11 @@ func (w *watcher) handleEvent(ctx context.Context, obj interface{}, upd updater)
 		pods := w.configs[cmKey]
 		w.mu.RUnlock()
 		if len(pods) != 0 {
-			klog.Infof("Secret update %s/%s, notifying %d pods", v.Namespace, v.Name, len(pods))
+			vklog.G(ctx).Infof("got notified of configmap update %q, notifying %d pods", cmKey, len(pods))
 		}
 		for _, pod := range pods {
 			if err := upd.updateConfigMap(ctx, pod, v); err != nil {
-				klog.Warningf("Secret update %s/%s: %s", v.Namespace, v.Name, err)
+				vklog.G(ctx).Warnf("failed to refresh configmap %q: %s", cmKey, err)
 			}
 		}
 
@@ -72,15 +73,16 @@ func (w *watcher) handleEvent(ctx context.Context, obj interface{}, upd updater)
 		pods := w.secrets[secretKey]
 		w.mu.RUnlock()
 		if len(pods) != 0 {
-			klog.Infof("ConfigMap update %s/%s, notifying %d pods", v.Namespace, v.Name, len(pods))
+			vklog.G(ctx).Infof("got notified of secret update %q, notifying %d pods", secretKey, len(pods))
 		}
 		for _, pod := range pods {
 			if err := upd.updateSecret(ctx, pod, v); err != nil {
-				klog.Warningf("ConfigMap update %s/%s: %s", v.Namespace, v.Name, err)
+				vklog.G(ctx).Warnf("failed to refresh secret %q: %s", secretKey, err)
 			}
 		}
+
 	default:
-		klog.Warningf("Ignoring unsupported type %T", v)
+		vklog.G(ctx).Warnf("ignoring unsupported type %T", v)
 	}
 }
 

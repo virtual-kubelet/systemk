@@ -1,6 +1,10 @@
 package manager
 
-import "github.com/virtual-kubelet/systemk/pkg/unit"
+import (
+	"github.com/virtual-kubelet/systemk/pkg/unit"
+)
+
+// TODO(pires) shouldn't this be covered by context so it becomes cancelable?
 
 // Manager manages systemd units.
 type Manager interface {

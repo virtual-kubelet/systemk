@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -10,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/klog/v2"
 )
 
 const (
@@ -34,12 +35,12 @@ const (
 // volumes inspects the PodSpec.Volumes attribute and returns a mapping with the volume's Name and the directory on-disk that
 // should be used for this. The on-disk structure is prepared and can be used.
 // which considered what volumes should be setup. Defaults to volumeAll
-func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
+func (p *P) volumes(ctx context.Context, pod *corev1.Pod, which Volume) (map[string]string, error) {
 	vol := make(map[string]string)
 	id := string(pod.ObjectMeta.UID)
 	uid, gid := uidGidFromSecurityContext(pod)
 	for i, v := range pod.Spec.Volumes {
-		klog.Infof("Looking at volume %q#%d", v.Name, i)
+		vklog.G(ctx).Infof("Looking at volume %q#%d", v.Name, i)
 		switch {
 		case v.HostPath != nil:
 			if which != volumeAll {
@@ -65,7 +66,7 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
-			klog.Infof("Created %q for emptyDir: %s", dir, v.Name)
+			vklog.G(ctx).Infof("Created %q for emptyDir: %s", dir, v.Name)
 			vol[v.Name] = dir
 
 		case v.Secret != nil:
@@ -92,19 +93,19 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
-			klog.Infof("Created %q for secret: %s", dir, v.Name)
+			vklog.G(ctx).Infof("Created %q for secret: %s", dir, v.Name)
 
 			for k, v := range secret.StringData {
 				data, err := base64.StdEncoding.DecodeString(string(v))
 				if err != nil {
 					return nil, err
 				}
-				if err := writeFile(dir, k, uid, gid, data); err != nil {
+				if err := writeFile(ctx, dir, k, uid, gid, data); err != nil {
 					return nil, err
 				}
 			}
 			for k, v := range secret.Data {
-				if err := writeFile(dir, k, uid, gid, []byte(v)); err != nil {
+				if err := writeFile(ctx, dir, k, uid, gid, []byte(v)); err != nil {
 					return nil, err
 				}
 			}
@@ -134,15 +135,15 @@ func (p *P) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 				return nil, err
 			}
-			klog.Infof("Created %q for configmap: %s", dir, v.Name)
+			vklog.G(ctx).Infof("Created %q for configmap: %s", dir, v.Name)
 
 			for k, v := range configMap.Data {
-				if err := writeFile(dir, k, uid, gid, []byte(v)); err != nil {
+				if err := writeFile(ctx, dir, k, uid, gid, []byte(v)); err != nil {
 					return nil, err
 				}
 			}
 			for k, v := range configMap.BinaryData {
-				if err := writeFile(dir, k, uid, gid, v); err != nil {
+				if err := writeFile(ctx, dir, k, uid, gid, v); err != nil {
 					return nil, err
 				}
 			}
@@ -181,12 +182,12 @@ func mkdirAllChown(path string, perm os.FileMode, uid, gid string) error {
 // writeFile writes data in to a tmp file in dir and chowns it to uid/gid and
 // then moves it over file. Note 'file': This mv fails for directories. Those need
 // to be removed first? (This is not done yet)
-func writeFile(dir, file, uid, gid string, data []byte) error {
+func writeFile(ctx context.Context, dir, file, uid, gid string, data []byte) error {
 	tmpfile, err := ioutil.TempFile(dir, "systemk.*.tmp")
 	if err != nil {
 		return err
 	}
-	klog.Infof("Chowning %q to %s.%s", tmpfile.Name(), uid, gid)
+	vklog.G(ctx).Infof("Chowning %q to %s.%s", tmpfile.Name(), uid, gid)
 	if err := chown(tmpfile.Name(), uid, gid); err != nil {
 		return err
 	}
@@ -195,12 +196,12 @@ func writeFile(dir, file, uid, gid string, data []byte) error {
 	if len(data) < 10 {
 		x = len(data)
 	}
-	klog.Infof("Writing data %q to path %q", data[:x], tmpfile.Name())
+	vklog.G(ctx).Infof("Writing data %q to path %q", data[:x], tmpfile.Name())
 	if err := ioutil.WriteFile(tmpfile.Name(), data, 0640); err != nil {
 		return err
 	}
 	path := filepath.Join(dir, file)
-	klog.Infof("Renaming %s to %s", tmpfile.Name(), path)
+	vklog.G(ctx).Infof("Renaming %s to %s", tmpfile.Name(), path)
 	return os.Rename(tmpfile.Name(), path)
 }
 

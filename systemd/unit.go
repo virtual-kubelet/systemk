@@ -1,6 +1,7 @@
 package systemd
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"io/ioutil"
@@ -10,14 +11,16 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/systemk/pkg/unit"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/klog/v2"
 )
 
 func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
+	ctx := context.TODO()
+
 	if len(stats) == 0 {
 		return nil
 	}
@@ -30,19 +33,20 @@ func (p *P) statsToPod(stats map[string]*unit.State) *corev1.Pod {
 	}
 	uf, err := unit.New(stats[name].UnitData)
 	if err != nil {
-		klog.Infof("error while parsing unit file %s", err)
+		vklog.G(ctx).Infof("error while parsing unit file %s", err)
 	}
 
 	if _, ok := uf.Contents[kubernetesSection]; !ok {
-		klog.Warningf("Unit %q did not contain %s section", name, kubernetesSection)
+		vklog.G(ctx).Warnf("Unit %q did not contain %s section", name, kubernetesSection)
 		// delete it
 		if err := p.m.TriggerStop(name); err != nil {
-			klog.Warningf("Failed to triggger top: %s", err)
+			vklog.G(ctx).Warnf("Failed to triggger top: %s", err)
 		}
 		if err := p.m.Unload(name); err != nil {
-			klog.Warningf("Failed to unload: %s", err)
+			vklog.G(ctx).Warnf("Failed to unload: %s", err)
 		}
 		p.m.Reload()
+
 		return nil
 	}
 
@@ -223,7 +227,6 @@ func (p *P) containerState(u *unit.State) v1.ContainerState {
 		}
 
 	default:
-		klog.Warningf("Unhandled substate for %q: %s", u.Name, u.SubState)
 		return v1.ContainerState{}
 	}
 }
@@ -283,15 +286,15 @@ ExecStart=
 WantedBy=multi-user.target
 `
 
-func (p *P) unitfileFromPackageOrSynthesized(c corev1.Container, installed bool) (*unit.File, error) {
+func (p *P) unitfileFromPackageOrSynthesized(ctx context.Context, c corev1.Container, installed bool) (*unit.File, error) {
 	u, err := p.pkg.Unitfile(c.Image)
 	if err != nil {
-		klog.Warningf("Failed to find unit file: %s. Synthesizing one", err)
+		vklog.G(ctx).Warnf("Failed to find unit file: %s. Synthesizing one", err)
 		uf, err := unit.New(synthUnit)
 		return uf, err
 	}
 
-	klog.Infof("Unit file found at %q", u)
+	vklog.G(ctx).Infof("Unit file found at %q", u)
 	buf, err := ioutil.ReadFile(u)
 	if err != nil {
 		return nil, err

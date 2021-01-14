@@ -10,12 +10,12 @@ import (
 	"github.com/virtual-kubelet/systemk/pkg/manager"
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/system"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	listersv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
 )
 
 // unitDir is where systemk stores the modified unit files.
@@ -64,13 +64,13 @@ func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 			break
 		}
 		// Just installed pre-requisites instead of pointing to the docs.
-		klog.Infof("Installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
+		vklog.G(ctx).Infof("installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
 		ok, err := p.pkg.Install("policyrcd-script-zg2", "")
 		if err != nil {
-			klog.Warningf("Failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
+			vklog.G(ctx).Warnf("failed to install %s, %s. Continuing anyway", "policyrcd-script-zg2", err)
 		}
 		if ok {
-			klog.Infof("%s is already installed", "policyrcd-script-zg2")
+			vklog.G(ctx).Infof("%s is already installed", "policyrcd-script-zg2")
 		}
 
 	case "arch":
@@ -143,7 +143,7 @@ func (p *P) SetNodeIPs(nodeIP, nodeEIP string) {
 		p.NodeExternalIP = external
 	}
 	if p.NodeExternalIP == nil && p.NodeInternalIP == nil {
-		klog.Fatal("Can not find internal or external IP address")
+		vklog.G(context.TODO()).Fatal("cannot find internal nor external IP addresses")
 	}
 	if p.NodeExternalIP == nil {
 		p.NodeExternalIP = p.NodeInternalIP

@@ -3,6 +3,7 @@ package packages
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/virtual-kubelet/systemk/pkg/unit"
-	"k8s.io/klog/v2"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // DebianPackageManager implemtents the PackageManager interface for a Debian system
@@ -24,13 +25,15 @@ const (
 )
 
 // Install install the given package at the given version
-// Does nothing if package is already installed
+// Does nothing if package is already installed or if we're not handling
+// an actual OS package, e.g. /bin/bash
 func (p *DebianPackageManager) Install(pkg, version string) (bool, error) {
-	klog.Infof("Checking if %q is installed", Clean(pkg))
+	vklog.G(context.TODO()).Infof("Checking if %q is installed", Clean(pkg))
 	if path.IsAbs(pkg) {
 		return false, nil
 	}
 	checkCmd := exec.Command(dpkgCommand, "-s", Clean(pkg))
+
 	if err := checkCmd.Run(); err == nil {
 		return false, nil
 	}
@@ -64,7 +67,7 @@ func (p *DebianPackageManager) Install(pkg, version string) (bool, error) {
 		installCmd.Env = append(installCmd.Env, env+"="+os.Getenv(env))
 	}
 
-	klog.Infof("Running %s", installCmd)
+	vklog.G(context.TODO()).Infof("Running %s", installCmd)
 	if out, err := installCmd.CombinedOutput(); err != nil {
 		return false, fmt.Errorf("failed to install: %s\n%s", err, out)
 	}

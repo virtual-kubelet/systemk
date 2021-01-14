@@ -1,6 +1,7 @@
 package packages
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/klog/v2"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // fetch fetches a package from the URL pointed at in pkg. The URL must be given with a scheme (http:// or https://).
@@ -20,7 +21,7 @@ func fetch(pkg, version string) (string, error) {
 	c.Timeout = 240 * time.Second
 
 	pkg = "https://" + pkg
-	klog.Infof("Fetching from %s", pkg)
+	vklog.G(context.TODO()).Infof("Fetching from %s", pkg)
 	resp, err := c.Get(pkg)
 	if err != nil {
 		return "", err

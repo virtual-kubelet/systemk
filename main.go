@@ -28,7 +28,8 @@ import (
 	"github.com/virtual-kubelet/node-cli/provider"
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/systemk/systemd"
-	"k8s.io/klog/v2"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
+	vkklogv2 "github.com/virtual-kubelet/virtual-kubelet/log/klogv2"
 )
 
 var (
@@ -56,12 +57,14 @@ func main() {
 
 	ctx := cli.ContextWithCancelOnSignal(context.Background())
 
+	vklog.L = vkklogv2.New(nil)
+
 	o, err := opts.FromEnv()
 	if err != nil {
-		klog.Fatal(err)
+		vklog.G(ctx).Fatal(err)
 	}
 	o.Provider = "systemd"
-	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
+	o.Version = strings.Join([]string{k8sVersion, "systemk", buildVersion}, "-")
 
 	node, err := cli.New(ctx,
 		cli.WithBaseOpts(o),
@@ -97,21 +100,23 @@ func main() {
 				return p, err
 			}
 			p.SetNodeIPs(nodeIP, nodeEIP)
-			klog.Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
+			vklog.G(ctx).Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
 
 			p.Topdirs = topdirs
 			if certFile == "" || keyFile == "" {
-				klog.Info("No certificates found, disabling GetContainerLogs")
+				vklog.G(ctx).Info("No certificates found, disabling GetContainerLogs")
 				return p, nil
 			}
 
 			r := mux.NewRouter()
 			r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
-			r.NotFoundHandler = http.HandlerFunc(p.NotFound)
+			r.NotFoundHandler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				http.Error(writer, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			})
 			go func() {
 				err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
 				if err != nil {
-					klog.Fatal(err)
+					vklog.G(ctx).Fatal(err)
 				}
 			}()
 			return p, nil
@@ -119,10 +124,10 @@ func main() {
 	)
 
 	if err != nil {
-		klog.Fatal(err)
+		vklog.G(ctx).Fatal(err)
 	}
 
 	if err := node.Run(ctx); err != nil {
-		klog.Fatal(err)
+		vklog.G(ctx).Fatal(err)
 	}
 }

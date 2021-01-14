@@ -1,5 +1,7 @@
 package packages
 
+// TODO(pires) shouldn't this be covered by context so it becomes cancelable?
+
 // PackageManager is the interface managing host packages
 type PackageManager interface {
 	// Install install the given package at the given version, the returned boolean is true.

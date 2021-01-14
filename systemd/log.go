@@ -7,14 +7,14 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"k8s.io/klog/v2"
 )
 
 func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if len(vars) != 3 {
-		p.NotFound(w, r)
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 
@@ -36,7 +36,7 @@ func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.TODO()
 	logs, err := p.GetContainerLogs(ctx, namespace, pod, container, opts)
 	if err != nil {
-		klog.Info(err)
+		vklog.G(ctx).Errorf("there was an error retrieving logs for pod %s/%s: %s", namespace, pod, err)
 		io.WriteString(w, err.Error())
 		return
 	}
@@ -45,7 +45,6 @@ func (p *P) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, logs)
 }
 
-func (p *P) NotFound(w http.ResponseWriter, _ *http.Request) {
-	klog.Info(http.StatusText(http.StatusNotFound))
-	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+func notFound(w http.ResponseWriter, _ *http.Request) {
+
 }

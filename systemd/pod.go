@@ -12,9 +12,9 @@ import (
 
 	"github.com/virtual-kubelet/systemk/pkg/packages"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
 // If any of these methods return an error, it will show up in the kubectl output as "ProviderFailed", so we should
@@ -22,10 +22,12 @@ import (
 // the container/unit start fail, which will be correctly picked up by the control plane.
 
 func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	klog.Infof("GetPod called for pod %q/%q", namespace, name)
+	logger := vklog.G(ctx).WithFields(vklog.Fields{"namespace": namespace, "pod": name})
+	logger.Info("GetPod called")
+
 	stats, err := p.m.States(unitPrefix(namespace, name))
 	if err != nil {
-		klog.Infof("Failed to get states: %s", err)
+		logger.Errorf("failed to get states: %s", err)
 		return nil, nil
 	}
 	pod := p.statsToPod(stats)
@@ -33,7 +35,8 @@ func (p *P) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, er
 }
 
 func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
-	klog.Info("GetPods called")
+	vklog.G(ctx).Info("GetPods called")
+
 	states, err := p.m.States(prefix)
 	if err != nil {
 		return nil, err
@@ -52,7 +55,7 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 		ns[namespace] = append(ns[namespace], pod)
 	}
 
-	pods := []*corev1.Pod{}
+	var pods []*corev1.Pod
 	for namespace, names := range ns {
 		for _, name := range names {
 			if pod, err := p.GetPod(ctx, namespace, name); err != nil {
@@ -64,11 +67,12 @@ func (p *P) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 }
 
 func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("CreatePod called for pod %q/%q", pod.Namespace, pod.Name)
+	logger := vklog.G(ctx).WithFields(vklog.Fields{"namespace": pod.Namespace, "pod": pod.Name})
+	logger.Info("CreatePod called")
 
-	vol, err := p.volumes(pod, volumeAll)
+	vol, err := p.volumes(ctx, pod, volumeAll)
 	if err != nil {
-		klog.Infof("Failed to setup volumes: %s", err)
+		logger.Warnf("failed to setup volumes: %s", err)
 	}
 
 	uid, gid := uidGidFromSecurityContext(pod)
@@ -78,13 +82,13 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	previousUnit := ""
 	for i, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		isInit := i < len(pod.Spec.InitContainers)
-		klog.Infof("Processing container %d (init=%t)", i, isInit)
+		logger.Debugf("processing container %d (init=%t)", i, isInit)
 
 		// TODO(): parse c.Image for tag to get version. Check ImagePullAlways to reinstall??
 		// if we're downloading the image, the image name needs cleaning
 		installed, err := p.pkg.Install(c.Image, "")
 		if err != nil {
-			klog.Infof("Failed to install package %q: %s", c.Image, err)
+			logger.Errorf("failed to install package %q: %s", c.Image, err)
 			return err
 		}
 
@@ -94,7 +98,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		for _, v := range c.VolumeMounts {
 			dir, ok := vol[v.Name]
 			if !ok {
-				klog.Infof("failed to find volumeMount %s in the specific volumes, skipping", v.Name)
+				logger.Warnf("failed to find volumeMount %s in the specific volumes, skipping", v.Name)
 				continue
 			}
 
@@ -121,11 +125,11 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			_, err := os.Stat(v.MountPath)
 			switch os.IsNotExist(err) {
 			case true: // doesn't exist
-				klog.Infof("Creating %q", v.MountPath)
+				logger.Debugf("creating %q", v.MountPath)
 				if err := os.MkdirAll(v.MountPath, dirPerms); err != nil {
 					return err // return err? This will be an event. TODO: tweak message
 				}
-				klog.Infof("Chowning %q", v.MountPath)
+				logger.Debugf("chowning %q", v.MountPath)
 				if err := chown(v.MountPath, uid, gid); err != nil {
 					return err
 				}
@@ -135,10 +139,10 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 					return err
 				}
 				if !empty {
-					klog.Infof("Directory %q is not empty, refusing to touch", v.MountPath)
+					logger.Debugf("directory %q is not empty, refusing to touch", v.MountPath)
 					break
 				}
-				klog.Infof("Chowning %q", v.MountPath)
+				logger.Debugf("chowning %q", v.MountPath)
 				if err := chown(v.MountPath, uid, gid); err != nil {
 					return err
 				}
@@ -151,9 +155,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			p.m.Mask(c.Image + unit.ServiceSuffix)
 		}
 
-		uf, err := p.unitfileFromPackageOrSynthesized(c, installed)
+		uf, err := p.unitfileFromPackageOrSynthesized(ctx, c, installed)
 		if err != nil {
-			klog.Infof("Failed to create/use unit file for %q: %s", c.Image, err)
+			logger.Errorf("failed to create/use unit file for %q: %s", c.Image, err)
 			return err
 		}
 		if c.WorkingDir != "" {
@@ -228,9 +232,9 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		if isInit {
 			init = "init-"
 		}
-		klog.Infof("Loading %sunit %s, %s as %s\n%s", init, c.Name, c.Image, name, uf)
+		logger.Infof("loading %sunit %s, %s as %s\n%s", init, c.Name, c.Image, name, uf)
 		if err := p.m.Load(name, *uf); err != nil {
-			klog.Infof("Failed to load unit %q: %s", name, err)
+			logger.Warnf("failed to load unit %q: %s", name, err)
 		}
 		unitsToStart = append(unitsToStart, name)
 		if isInit {
@@ -238,19 +242,21 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 	}
 	for _, name := range unitsToStart {
-		klog.Infof("Starting unit %q", name)
+		logger.Infof("starting unit %q", name)
 		if err := p.m.TriggerStart(name); err != nil {
-			klog.Infof("Failed to trigger start for unit %q: %s", name, err)
+			logger.Warnf("failed to start unit %q: %s", name, err)
 		}
 	}
 	p.w.Watch(pod)
+	logger.Infof("created pod successfully")
+
 	return nil
 }
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *P) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
-	klog.Infof("RunInContainer called for pod %q/%q/%q", namespace, name, container)
+	vklog.G(ctx).Infof("RunInContainer called for pod %q/%q/%q", namespace, name, container)
 	// Should we just try to start something? But with what user???
 	return nil
 }
@@ -258,7 +264,7 @@ func (p *P) RunInContainer(ctx context.Context, namespace, name, container strin
 // GetPodStatus returns the status of a pod by name that is running.
 // returns nil if a pod by that name is not found.
 func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	klog.Infof("GetPodStatus called for pod %q/%q", namespace, name)
+	vklog.G(ctx).Infof("GetPodStatus called for pod %q/%q", namespace, name)
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
@@ -270,7 +276,7 @@ func (p *P) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 }
 
 func (p *P) GetContainerLogs(ctx context.Context, namespace, name, container string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	klog.Infof("GetContainerLogs called for pod %q/%q/%q", namespace, name, container)
+	vklog.G(ctx).Infof("GetContainerLogs called for pod %q/%q/%q", namespace, name, container)
 
 	unitname := unitPrefix(namespace, name) + separator + container
 	args := []string{"-u", unitname}
@@ -280,48 +286,62 @@ func (p *P) GetContainerLogs(ctx context.Context, namespace, name, container str
 	return ioutil.NopCloser(bytes.NewReader(buf)), err
 }
 
-// UpdatePod is a noop,
+// UpdatePod is a noop.
 func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("UpdatePod called for pod %q/%q", pod.Namespace, pod.Name)
 	return nil
 }
 
 // DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	klog.Infof("DeletePod called for pod %q/%q", pod.Namespace, pod.Name)
+	logger := vklog.G(ctx).WithFields(vklog.Fields{"namespace": pod.Namespace, "pod": pod.Name})
+	logger.Info("deleting pod")
+
 	unitsToUnload := []string{}
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		name := podToUnitName(pod, c.Name)
+		logger.Infof("stopping unit %q", name)
 		if err := p.m.TriggerStop(name); err != nil {
-			klog.Warningf("Failed to trigger stop for unit %q: %s", name, err)
+			logger.Warnf("failed to stop unit %q: %s", name, err)
 		}
 		unitsToUnload = append(unitsToUnload, name)
 	}
 
 	for _, name := range unitsToUnload {
+		logger.Infof("unloading unit %q", name)
 		if err := p.m.Unload(name); err != nil {
-			klog.Warningf("Failed to unload unit %q: %s", name, err)
+			logger.Warnf("failed to unload unit %q: %s", name, err)
 		}
-		klog.Infof("Deleted unit [%q] successfully", name)
+		logger.Infof("unloaded unit %q successfully", name)
 	}
 	p.m.Reload()
 	p.w.Unwatch(pod)
 
 	// Clean-up volumes.
+	logger.Debug("cleaning-up volumes")
 	if err := cleanPodEphemeralVolumes(string(pod.UID)); err != nil {
-		klog.Warningf("failed to clean-up volumes for pod %q/%q: %s", pod.Namespace, pod.Name, err)
+		logger.Warnf("failed to clean-up volumes: %s", err)
 	}
+
+	logger.Info("deleted pod successfully")
 
 	return nil
 }
 
 func (p *P) updateConfigMap(ctx context.Context, pod *corev1.Pod, cm *corev1.ConfigMap) error {
-	_, err := p.volumes(pod, volumeConfigMap)
+	logger := vklog.G(ctx).WithFields(vklog.Fields{"namespace": pod.Namespace, "pod": pod.Name, "configMap": cm.Name})
+	logger.Info("updating configmap")
+
+	_, err := p.volumes(ctx, pod, volumeConfigMap)
+
 	return err
 }
 
-func (p *P) updateSecret(ctx context.Context, pod *corev1.Pod, s *corev1.Secret) error {
-	_, err := p.volumes(pod, volumeSecret)
+func (p *P) updateSecret(ctx context.Context, pod *corev1.Pod, secret *corev1.Secret) error {
+	logger := vklog.G(ctx).WithFields(vklog.Fields{"namespace": pod.Namespace, "pod": pod.Name, "secret": secret.Name})
+	logger.Info("updating secret")
+
+	_, err := p.volumes(ctx, pod, volumeSecret)
+
 	return err
 }
 
