@@ -8,6 +8,4 @@ type PackageManager interface {
 	// Unitfile returns the location of the unitfile for the given package
 	// Returns an error if no unitfiles were found
 	Unitfile(pkg string) (string, error)
-	// Clean "cleans" the pkg string, removing the prefix and return a bare name of the pkg.
-	Clean(pkg string) string
 }

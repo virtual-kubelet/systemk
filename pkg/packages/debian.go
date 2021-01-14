@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -27,15 +26,18 @@ const (
 // Install install the given package at the given version
 // Does nothing if package is already installed
 func (p *DebianPackageManager) Install(pkg, version string) (bool, error) {
-	klog.Infof("Checking if %q is installed", p.Clean(pkg))
-	checkCmd := exec.Command(dpkgCommand, "-s", p.Clean(pkg))
+	klog.Infof("Checking if %q is installed", Clean(pkg))
+	if path.IsAbs(pkg) {
+		return false, nil
+	}
+	checkCmd := exec.Command(dpkgCommand, "-s", Clean(pkg))
 	if err := checkCmd.Run(); err == nil {
 		return false, nil
 	}
 
 	installCmd := new(exec.Cmd)
 	switch {
-	case strings.HasPrefix(pkg, "deb://"):
+	case strings.HasPrefix(pkg, "https://"):
 		pkgToInstall, err := fetch(pkg[6:], "")
 		if err != nil {
 			return false, err
@@ -112,21 +114,4 @@ func (p *DebianPackageManager) Unitfile(pkg string) (string, error) {
 		return "", err
 	}
 	return basicPath, nil
-}
-
-// Clean implements the Packager interface. On error the origin string is returned.
-func (p *DebianPackageManager) Clean(pkg string) string {
-	if !strings.HasPrefix(pkg, "deb://") {
-		return pkg
-	}
-	u, err := url.Parse(pkg)
-	if err != nil {
-		return pkg
-	}
-	deb := path.Base(u.Path)
-	i := strings.Index(deb, "_")
-	if i < 2 {
-		return pkg
-	}
-	return deb[:i]
 }

@@ -11,7 +11,6 @@ type NoopPackageManager struct{}
 
 func (p *NoopPackageManager) Setup() error                              { return nil }
 func (p *NoopPackageManager) Install(pkg, version string) (bool, error) { return true, nil }
-func (p *NoopPackageManager) Clean(pkg string) string                   { return pkg }
 func (p *NoopPackageManager) Unitfile(pkg string) (string, error) {
 	// This is fine as pod creation will synthesize a unit file.
 	return "", fmt.Errorf("noop")

@@ -18,7 +18,7 @@ spec:
     ports:
     - containerPort: 2222
   - name: while
-    image: bash
+    image: /bin/bash
     command: ["bash", "-c"]
     args: ["while true; do cat /etc/uptimed/test.txt; sleep 1; done"]
     volumeMounts:
