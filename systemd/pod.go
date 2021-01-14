@@ -230,7 +230,7 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 		klog.Infof("Loading %sunit %s, %s as %s\n%s", init, c.Name, c.Image, name, uf)
 		if err := p.m.Load(name, *uf); err != nil {
-			klog.Infof("Failed to load unit: %s", err)
+			klog.Infof("Failed to load unit %q: %s", name, err)
 		}
 		unitsToStart = append(unitsToStart, name)
 		if isInit {
@@ -289,13 +289,18 @@ func (p *P) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 // DeletePod deletes a pod.
 func (p *P) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	klog.Infof("DeletePod called for pod %q/%q", pod.Namespace, pod.Name)
+	unitsToUnload := []string{}
 	for _, c := range append(pod.Spec.InitContainers, pod.Spec.Containers...) {
 		name := podToUnitName(pod, c.Name)
 		if err := p.m.TriggerStop(name); err != nil {
-			klog.Warningf("Failed to trigger top: %s", err)
+			klog.Warningf("Failed to trigger stop for unit %q: %s", name, err)
 		}
+		unitsToUnload = append(unitsToUnload, name)
+	}
+
+	for _, name := range unitsToUnload {
 		if err := p.m.Unload(name); err != nil {
-			klog.Warningf("Failed to unload: %s", err)
+			klog.Warningf("Failed to unload unit %q: %s", name, err)
 		}
 		klog.Infof("Deleted unit [%q] successfully", name)
 	}
