@@ -50,8 +50,8 @@ func main() {
 	// these options need to be make inline with k3s or make clear they afffect logs, certfile and keyfile is too short
 	flags.StringVar(&certFile, "certfile", "", "certfile")
 	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
-	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node")
-	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node")
+	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
+	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
 	flags.StringSliceVarP(&topdirs, "dir", "d", []string{"/var"}, "Only allow mounts below these directories")
 
 	ctx := cli.ContextWithCancelOnSignal(context.Background())

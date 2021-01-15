@@ -123,6 +123,13 @@ func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 }
 
 func (p *P) SetNodeIPs(nodeIP, nodeEIP string) {
+	if nodeIP == "0.0.0.0" {
+		nodeIP = ""
+	}
+	if nodeEIP == "0.0.0.0" {
+		nodeEIP = ""
+	}
+
 	// Get the addresses.
 	internal, external := nodeAddresses()
 	if nodeIP != "" {
