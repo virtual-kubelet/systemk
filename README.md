@@ -157,8 +157,13 @@ allowed, but this can be changed via the `--dir` or `-d` flag.
 
 ### Limitations
 
-By using systemd and the hosts network we have weak isolation between pods, i.e. no more than
-process isolation. Starting two pods that use the same port is guaranteed to fail for one.
+By using systemd and the host's network stack we have weak isolation between pods, i.e. no more
+than process isolation. Starting two pods that use the same port is guaranteed to fail for one.
+To expand on this, everything is run as if `.spec.hostNetwork: true` is specified. Port clashes
+are (probably?) more likely for health check ports. Two pods using the same (health check) port
+thus can't schedule on the same machine. We have some ideas to get around this (like generating
+an environment variable with a unique port number (or using `$RANDOM`) that can be used for health
+checking, but are also open to suggestions, including not doing anything.
 
 ## Use with K3S
 
