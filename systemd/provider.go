@@ -28,7 +28,7 @@ type P struct {
 
 	secretLister listersv1.SecretLister
 	cmLister     listersv1.ConfigMapLister
-	w            *Watcher
+	w            *watcher
 
 	NodeInternalIP *corev1.NodeAddress
 	NodeExternalIP *corev1.NodeAddress
@@ -39,6 +39,9 @@ type P struct {
 	daemonPort    int32
 	kubernetesURL string
 }
+
+// Ensure P implements updater at compile time.
+var _ updater = (*P)(nil)
 
 // New returns a new systemd provider.
 func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
@@ -106,11 +109,11 @@ func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 	informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute*1)
 
 	secretInformer := informerFactory.Core().V1().Secrets()
-	secretInformer.Informer().AddEventHandler(p.w.handlerFuncs(p))
+	secretInformer.Informer().AddEventHandler(p.w.handlerFuncs(ctx, p))
 	p.secretLister = secretInformer.Lister()
 
 	cmInformer := informerFactory.Core().V1().ConfigMaps()
-	cmInformer.Informer().AddEventHandler(p.w.handlerFuncs(p))
+	cmInformer.Informer().AddEventHandler(p.w.handlerFuncs(ctx, p))
 	p.cmLister = cmInformer.Lister()
 
 	informerFactory.Start(ctx.Done())
