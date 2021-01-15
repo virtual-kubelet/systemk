@@ -163,7 +163,7 @@ To expand on this, everything is run as if `.spec.hostNetwork: true` is specifie
 are (probably?) more likely for health check ports. Two pods using the same (health check) port
 thus can't schedule on the same machine. We have some ideas to get around this (like generating
 an environment variable with a unique port number (or using `$RANDOM`) that can be used for health
-checking But are also open to suggestions, including not doing anything.
+checking, but are also open to suggestions, including not doing anything.
 
 ## Use with K3S
 
