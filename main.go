@@ -70,11 +70,11 @@ func main() {
 		cli.WithPersistentPreRunCallback(func() error {
 			// Enforce usage of Node Leases API.
 			o.EnableNodeLease = true
-			var defaultHostname string
-			if defaultHostname = os.Getenv("HOSTNAME"); defaultHostname == "" {
-				defaultHostname = system.Hostname()
+
+			o.NodeName = os.Getenv("HOSTNAME")
+			if o.NodeName == "" {
+				o.NodeName = system.Hostname()
 			}
-			o.NodeName = defaultHostname
 			return nil
 		}),
 		cli.WithCLIVersion(buildVersion, buildTime),
