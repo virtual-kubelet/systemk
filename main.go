@@ -70,22 +70,11 @@ func main() {
 		cli.WithPersistentPreRunCallback(func() error {
 			// Enforce usage of Node Leases API.
 			o.EnableNodeLease = true
-
-			// Ensure Node name is set.
-			//
-			// Setting the Node name is computed in the following order:
-			// 1. flag --nodename, or if not set
-			// 2. environment variable HOSTNAME, or if not set
-			// 3. the hostname of the machine where systemk is running.
-			if flag := flags.Lookup("nodename"); flag != nil {
-				if !flag.Changed {
-					var defaultHostname string
-					if defaultHostname = os.Getenv("HOSTNAME"); defaultHostname == "" {
-						defaultHostname = system.Hostname()
-					}
-					o.NodeName = defaultHostname
-				}
+			var defaultHostname string
+			if defaultHostname = os.Getenv("HOSTNAME"); defaultHostname == "" {
+				defaultHostname = system.Hostname()
 			}
+			o.NodeName = defaultHostname
 			return nil
 		}),
 		cli.WithCLIVersion(buildVersion, buildTime),
