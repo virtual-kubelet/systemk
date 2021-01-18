@@ -167,12 +167,18 @@ func (p *P) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
-		// If there is a securityContext we'll use that.
-		if uid != "" {
-			uf = uf.Overwrite("Service", "User", uid)
-		}
-		if gid != "" {
-			uf = uf.Overwrite("Service", "Group", gid)
+		// If there is a securityContext we'll use that. If we are talking to a systemd for a user, we can't change
+		// users here, so skip this and delete any user/group settings.
+		if p.systemdUser {
+			uf = uf.Delete("Service", "User")
+			uf = uf.Delete("Service", "Group")
+		} else {
+			if uid != "" {
+				uf = uf.Overwrite("Service", "User", uid)
+			}
+			if gid != "" {
+				uf = uf.Overwrite("Service", "Group", gid)
+			}
 		}
 
 		// Treat initContainer differently.

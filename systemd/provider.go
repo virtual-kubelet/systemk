@@ -34,6 +34,7 @@ type P struct {
 	NodeExternalIP *corev1.NodeAddress
 	ClusterDomain  string
 	Topdirs        []string
+	systemdUser    bool // When true we're connecting to a user's systemd.
 
 	nodename      string
 	daemonPort    int32
@@ -44,11 +45,11 @@ type P struct {
 var _ updater = (*P)(nil)
 
 // New returns a new systemd provider.
-func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
+func New(ctx context.Context, systemdUser bool, cfg provider.InitConfig) (*P, error) {
 	if err := os.MkdirAll(unitDir, 0750); err != nil {
 		return nil, err
 	}
-	m, err := manager.New(unitDir, false)
+	m, err := manager.New(unitDir, systemdUser)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +83,7 @@ func New(ctx context.Context, cfg provider.InitConfig) (*P, error) {
 	p.ClusterDomain = cfg.KubeClusterDomain
 	p.nodename = cfg.NodeName
 	p.daemonPort = cfg.DaemonPort
+	p.systemdUser = systemdUser
 
 	// Parse the kubeconfig, yet again, to gain access to the Host field,
 	// which has the value to set for the KUBERNETES_SERVICE_* Pod env vars.

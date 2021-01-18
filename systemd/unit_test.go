@@ -25,7 +25,7 @@ func TestNewUnit(t *testing.T) {
 	}
 	defer os.RemoveAll(dir) // clean up
 	unitDir = dir
-	p, err := New(context.TODO(), provider.InitConfig{})
+	p, err := New(context.TODO(), false, provider.InitConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
