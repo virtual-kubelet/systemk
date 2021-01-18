@@ -82,8 +82,15 @@ func main() {
 		cli.WithCLIVersion(buildVersion, buildTime),
 		cli.WithKubernetesNodeVersion(k8sVersion),
 		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {
-			cfg.ConfigPath = o.KubeConfigPath
-			p, err := systemd.New(ctx, user, cfg)
+			initCfg := systemd.InitConfig{InitConfig: cfg}
+			initCfg.ConfigPath = o.KubeConfigPath
+			initCfg.SystemdUser = user
+			initCfg.UnitDir = "/var/run/systemk"
+			if user {
+				uid := os.Geteuid()
+				initCfg.UnitDir = fmt.Sprintf("/var/run/user/%d/systemk", uid)
+			}
+			p, err := systemd.New(ctx, initCfg)
 			if err != nil {
 				return p, err
 			}

@@ -18,9 +18,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// unitDir is where systemk stores the modified unit files.
-var unitDir = "/var/run/systemk"
-
 // P is a systemd provider.
 type P struct {
 	m   manager.Manager
@@ -41,15 +38,19 @@ type P struct {
 	kubernetesURL string
 }
 
-// Ensure P implements updater at compile time.
-var _ updater = (*P)(nil)
+// InitConfig holds configuration used to initialize the provider.
+type InitConfig struct {
+	provider.InitConfig
+	SystemdUser bool
+	UnitDir     string
+}
 
 // New returns a new systemd provider.
-func New(ctx context.Context, systemdUser bool, cfg provider.InitConfig) (*P, error) {
-	if err := os.MkdirAll(unitDir, 0750); err != nil {
+func New(ctx context.Context, cfg InitConfig) (*P, error) {
+	if err := os.MkdirAll(cfg.UnitDir, 0750); err != nil {
 		return nil, err
 	}
-	m, err := manager.New(unitDir, systemdUser)
+	m, err := manager.New(cfg.UnitDir, cfg.SystemdUser)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func New(ctx context.Context, systemdUser bool, cfg provider.InitConfig) (*P, er
 	p.ClusterDomain = cfg.KubeClusterDomain
 	p.nodename = cfg.NodeName
 	p.daemonPort = cfg.DaemonPort
-	p.systemdUser = systemdUser
+	p.systemdUser = cfg.SystemdUser
 
 	// Parse the kubeconfig, yet again, to gain access to the Host field,
 	// which has the value to set for the KUBERNETES_SERVICE_* Pod env vars.
@@ -156,3 +157,6 @@ func (p *P) SetNodeIPs(nodeIP, nodeEIP string) {
 }
 
 var _ provider.Provider = new(P)
+
+// Ensure P implements updater at compile time.
+var _ updater = (*P)(nil)
