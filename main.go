@@ -53,7 +53,7 @@ func main() {
 	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
 	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
 	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
-	flags.BoolVarP(&user, "user", "u", false, fmt.Sprintf("Connect to the user's (%q) systemd", os.Getenv("LOGNAME")))
+	flags.BoolVarP(&user, "user", "u", false, "Connect to the systemd of the user running systemk")
 	flags.StringSliceVarP(&topdirs, "dir", "d", []string{"/var"}, "Only allow mounts below these directories")
 
 	ctx := cli.ContextWithCancelOnSignal(context.Background())
