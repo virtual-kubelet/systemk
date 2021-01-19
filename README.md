@@ -169,7 +169,7 @@ things:
    Note when running a graphical session in Linux you probably have a user systemd already running,
    connecting to that instance requires `cap_sys_admin` to be set as well.
 
-Note: this support is experimental and we may removed it if it turns to be too cumbersome.
+**Note:** this feature is experimental and we may remove it if it turns to be too cumbersome.
 
 ### Limitations
 
