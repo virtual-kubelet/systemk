@@ -155,6 +155,22 @@ user/group.
 You can restrict the allowed mounts points for the pod's volumes. By default mounts under "/var" are
 allowed, but this can be changed via the `--dir` or `-d` flag.
 
+### Running Without Root Permissions
+
+Some work has been done to be able to run `systemk` without root permissions. This means a couple of
+things:
+
+1. Packages can't be installed, so you'll need to use a path as the image name (See "Binary Exists in
+   File System").
+2. A user systemd must be running with the same uid as systemk.
+3. Systemk must be started with the right set of capabilities:
+   `% sudo capsh --caps="cap_chown,cap_setuid,cap_setgid+ep" --user=$UID -- -c "$PWD/systemk -u --kubeconfig $CONFIG"`
+   Or an equivalent systemd unit file.
+   Note when running a graphical session in Linux you probably have a user systemd already running,
+   connecting to that instance requires `cap_sys_admin` to be set as well.
+
+**Note:** this feature is experimental and we may remove it if it turns to be too cumbersome.
+
 ### Limitations
 
 By using systemd and the host's network stack we have weak isolation between pods, i.e. no more

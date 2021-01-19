@@ -6,7 +6,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/virtual-kubelet/node-cli/provider"
 	"github.com/virtual-kubelet/systemk/pkg/system"
 	"github.com/virtual-kubelet/systemk/pkg/unit"
 )
@@ -24,8 +23,8 @@ func TestNewUnit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir) // clean up
-	unitDir = dir
-	p, err := New(context.TODO(), provider.InitConfig{})
+	initCfg := InitConfig{UnitDir: dir}
+	p, err := New(context.TODO(), initCfg)
 	if err != nil {
 		t.Fatal(err)
 	}
