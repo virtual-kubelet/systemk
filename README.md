@@ -163,11 +163,13 @@ things:
 1. Packages can't be installed, so you'll need to use a path as the image name (See "Binary Exists in
    File System").
 2. A user systemd must be running with the same uid as systemk.
-3. Systemk must be started with the right set of capabilties:
+3. Systemk must be started with the right set of capabilities:
    `% sudo capsh --caps="cap_chown,cap_setuid,cap_setgid+ep" --user=$UID -- -c "$PWD/systemk -u --kubeconfig $CONFIG"`
    Or an equivalent systemd unit file.
    Note when running a graphical session in Linux you probably have a user systemd already running,
    connecting to that instance requires `cap_sys_admin` to be set as well.
+
+Note: this support is experimental and we may removed it if it turns to be too cumbersome.
 
 ### Limitations
 
