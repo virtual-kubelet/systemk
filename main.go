@@ -1,4 +1,4 @@
-// Copyright © 2017 The virtual-kubelet authors
+// Copyright © 2021 The systemk authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,111 +16,54 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"os"
-	"strings"
+	"os/signal"
+	"path/filepath"
+	"syscall"
 
-	"github.com/gorilla/mux"
-	"github.com/spf13/pflag"
-	cli "github.com/virtual-kubelet/node-cli"
-	"github.com/virtual-kubelet/node-cli/opts"
-	"github.com/virtual-kubelet/node-cli/provider"
-	"github.com/virtual-kubelet/systemk/pkg/system"
-	"github.com/virtual-kubelet/systemk/systemd"
-	"k8s.io/klog/v2"
+	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/systemk/cmd"
+	"github.com/virtual-kubelet/systemk/internal/provider"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
+	vklogv2 "github.com/virtual-kubelet/virtual-kubelet/log/klogv2"
 )
 
 var (
 	buildVersion = "N/A"
 	buildTime    = "N/A"
-	k8sVersion   = "v1.18.4" // Inject this build time by parsing mod.go
+	k8sVersion   = "v1.18.15" // This should follow the version of k8s.io/kubernetes we are importing
 )
 
+var log = vklogv2.New(nil)
+
 func main() {
-	var (
-		certFile string
-		keyFile  string
-		nodeIP   string
-		nodeEIP  string
-		topdirs  []string
-		user     bool
-	)
+	ctx, cancel := context.WithCancel(context.Background())
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sig
+		cancel()
+	}()
 
-	flags := pflag.NewFlagSet("client", pflag.ContinueOnError)
-	// these options need to be make inline with k3s or make clear they afffect logs, certfile and keyfile is too short
-	flags.StringVar(&certFile, "certfile", "", "certfile")
-	flags.StringVar(&keyFile, "keyfile", "", "keyfile")
-	flags.StringVarP(&nodeIP, "node-ip", "i", "", "IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
-	flags.StringVar(&nodeEIP, "node-external-ip", "", "External IP address to advertise for node, '0.0.0.0' or not provided to auto-detect")
-	flags.BoolVarP(&user, "user", "u", false, "Connect to the systemd of the user running systemk")
-	flags.StringSliceVarP(&topdirs, "dir", "d", []string{"/var"}, "Only allow mounts below these directories")
+	// Setup VK logger.
+	vklog.L = vklogv2.New(map[string]interface{}{"source": "virtual-kubelet"})
 
-	ctx := cli.ContextWithCancelOnSignal(context.Background())
+	// Default systemk provider configuration.
+	var opts provider.Opts
+	provider.SetDefaultOpts(&opts)
+	// The Kubernetes version systemk tracks.
+	// This is important because of Kubernetes version skew policy.
+	// See https://kubernetes.io/docs/setup/release/version-skew-policy/#kubelet
+	opts.Version = k8sVersion
 
-	o, err := opts.FromEnv()
-	if err != nil {
-		klog.Fatal(err)
-	}
-	o.Provider = "systemd"
-	o.Version = strings.Join([]string{k8sVersion, "vk-systemd", buildVersion}, "-")
-
-	node, err := cli.New(ctx,
-		cli.WithBaseOpts(o),
-		cli.WithPersistentFlags(flags),
-		// Validate configuration after flag parsing.
-		cli.WithPersistentPreRunCallback(func() error {
-			// Enforce usage of Node Leases API.
-			o.EnableNodeLease = true
-
-			o.NodeName = os.Getenv("HOSTNAME")
-			if o.NodeName == "" {
-				o.NodeName = system.Hostname()
-			}
-			return nil
-		}),
-		cli.WithCLIVersion(buildVersion, buildTime),
-		cli.WithKubernetesNodeVersion(k8sVersion),
-		cli.WithProvider("systemd", func(cfg provider.InitConfig) (provider.Provider, error) {
-			initCfg := systemd.InitConfig{InitConfig: cfg}
-			initCfg.ConfigPath = o.KubeConfigPath
-			initCfg.SystemdUser = user
-			initCfg.UnitDir = "/var/run/systemk"
-			if user {
-				uid := os.Geteuid()
-				initCfg.UnitDir = fmt.Sprintf("/var/run/user/%d/systemk", uid)
-			}
-			p, err := systemd.New(ctx, initCfg)
-			if err != nil {
-				return p, err
-			}
-			p.SetNodeIPs(nodeIP, nodeEIP)
-			klog.Infof("Using internal/external IP addresses: %s/%s", p.NodeInternalIP.Address, p.NodeExternalIP.Address)
-
-			p.Topdirs = topdirs
-			if certFile == "" || keyFile == "" {
-				klog.Info("No certificates found, disabling GetContainerLogs")
-				return p, nil
-			}
-
-			r := mux.NewRouter()
-			r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
-			r.NotFoundHandler = http.HandlerFunc(p.NotFound)
-			go func() {
-				err := http.ListenAndServeTLS(fmt.Sprintf(":%d", cfg.DaemonPort), certFile, keyFile, r)
-				if err != nil {
-					klog.Fatal(err)
-				}
-			}()
-			return p, nil
-		}),
-	)
-
-	if err != nil {
-		klog.Fatal(err)
+	// Setup the root systemk CLI command.
+	rootCmd := cmd.NewRootCommand(ctx, filepath.Base(os.Args[0]), &opts)
+	rootCmd.AddCommand(cmd.NewVersionCommand(buildVersion, buildTime))
+	// And fire up engines!
+	if err := rootCmd.Execute(); err != nil && errors.Cause(err) != context.Canceled {
+		log.Fatal(err)
 	}
 
-	if err := node.Run(ctx); err != nil {
-		klog.Fatal(err)
-	}
+	log.Info("system exited gracefully")
+
 }
