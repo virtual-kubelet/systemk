@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5
-	github.com/virtual-kubelet/virtual-kubelet v1.3.1-0.20210120174410-3cfd4737dc64
+	github.com/virtual-kubelet/virtual-kubelet v1.4.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v0.18.15
