@@ -82,7 +82,7 @@ func Image() string {
 
 // Version returns the version of systemd.
 func Version() string {
-	cmd := exec.Command("systemd", "--version")
+	cmd := exec.Command("systemctl", "--version")
 	buf, err := cmd.Output()
 	if err != nil {
 		return ""
