@@ -1,20 +1,18 @@
 package provider
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
+	"time"
 
+	"github.com/coreos/go-systemd/v22/sdjournal"
 	"github.com/pkg/errors"
-
 	"github.com/virtual-kubelet/systemk/internal/ospkg"
 	"github.com/virtual-kubelet/systemk/internal/unit"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	nodeapi "github.com/virtual-kubelet/virtual-kubelet/node/api"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -54,7 +52,7 @@ func (p *p) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 		ns[namespace] = append(ns[namespace], pod)
 	}
 
-	pods := []*corev1.Pod{}
+	var pods []*corev1.Pod
 	for namespace, names := range ns {
 		for _, name := range names {
 			if pod, err := p.GetPod(ctx, namespace, name); err != nil {
@@ -264,7 +262,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *p) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+func (p *p) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach nodeapi.AttachIO) error {
 	log.
 		WithField("podNamespace", namespace).
 		WithField("podName", name).
@@ -293,20 +291,56 @@ func (p *p) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
-func (p *p) GetContainerLogs(ctx context.Context, namespace, name, container string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
-	log.
+// TODO(pires) support follow mode
+// TODO(pires) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
+func (p *p) GetContainerLogs(ctx context.Context, namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (io.ReadCloser, error) {
+	fnlog := log.
 		WithField("podNamespace", namespace).
 		WithField("podName", name).
-		WithField("containerName", container).
-		Debug("GetContainerLogs called")
+		WithField("containerName", container)
 
-	unitname := unitPrefix(namespace, name) + separator + container
-	args := []string{"-u", unitname}
-	cmd := exec.Command("journalctl", args...)
-	// returns the buffers? What about following, use pipes here or something?
-	buf, err := cmd.CombinedOutput()
+	fnlog.Debugf("GetContainerLogs called with options %+v", logOpts)
 
-	return ioutil.NopCloser(bytes.NewReader(buf)), err
+	unitname := strings.Join([]string{unitPrefix(namespace, name), container, "service"}, separator)
+	journalConfig := sdjournal.JournalReaderConfig{
+		Matches: []sdjournal.Match{
+			{
+				// Filter by unit.
+				Field: sdjournal.SD_JOURNAL_FIELD_SYSTEMD_UNIT,
+				Value: unitname,
+			},
+		},
+	}
+	if logOpts.SinceSeconds > 0 {
+		// Since duration must be negative so we get logs from the past.
+		journalConfig.Since = -time.Second * time.Duration(logOpts.SinceSeconds)
+	}
+	// By default, SinceTime is "0001-01-01 00:00:00 +0000 UTC".
+	if !logOpts.SinceTime.IsZero() {
+		journalConfig.Since = time.Since(logOpts.SinceTime)
+	}
+	if logOpts.Tail > 0 {
+		journalConfig.NumFromTail = uint64(logOpts.Tail)
+	}
+	// By default, timestamps are present in journal entries.
+	// Kubernetes defaults to not having timestamps, so we adapt.
+	if !logOpts.Timestamps {
+		journalConfig.Formatter = func(entry *sdjournal.JournalEntry) (string, error) {
+			msg, ok := entry.Fields[sdjournal.SD_JOURNAL_FIELD_MESSAGE]
+			if !ok {
+				return "", fmt.Errorf("no %q field present in journal entry", sdjournal.SD_JOURNAL_FIELD_MESSAGE)
+			}
+
+			return fmt.Sprintf("%s\n", msg), nil
+		}
+	}
+
+	journalReader, err := sdjournal.NewJournalReader(journalConfig)
+	if err != nil {
+		fnlog.Error("failed to retrieve logs from journald, for unit %q", unitname, err)
+	}
+
+	return journalReader, err
 }
 
 // UpdatePod is a noop,

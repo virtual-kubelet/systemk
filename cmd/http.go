@@ -25,7 +25,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/systemk/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	nodeapi "github.com/virtual-kubelet/virtual-kubelet/node/api"
 )
 
 // AcceptedCiphers is the list of accepted TLS ciphers, with known weak ciphers elided
@@ -57,7 +57,7 @@ func loadTLSConfig(certPath, keyPath string) (*tls.Config, error) {
 }
 
 // setupKubeletServer configures and brings up the kubelet API server.
-func setupKubeletServer(ctx context.Context, config *provider.Opts, p provider.Provider, getPodsFromKubernetes api.PodListerFunc) (_ func(), retErr error) {
+func setupKubeletServer(ctx context.Context, config *provider.Opts, p provider.Provider, getPodsFromKubernetes nodeapi.PodListerFunc) (_ func(), retErr error) {
 	var closers []io.Closer
 	cancel := func() {
 		for _, c := range closers {
@@ -88,7 +88,7 @@ func setupKubeletServer(ctx context.Context, config *provider.Opts, p provider.P
 
 		// Setup path routing.
 		mux := http.NewServeMux()
-		podRoutes := api.PodHandlerConfig{
+		podRoutes := nodeapi.PodHandlerConfig{
 			RunInContainer:        p.RunInContainer,
 			GetContainerLogs:      p.GetContainerLogs,
 			GetPodsFromKubernetes: getPodsFromKubernetes,
@@ -96,7 +96,7 @@ func setupKubeletServer(ctx context.Context, config *provider.Opts, p provider.P
 			StreamIdleTimeout:     config.StreamIdleTimeout,
 			StreamCreationTimeout: config.StreamCreationTimeout,
 		}
-		api.AttachPodRoutes(podRoutes, mux, true)
+		nodeapi.AttachPodRoutes(podRoutes, mux, true)
 
 		// Start the server.
 		s := &http.Server{
