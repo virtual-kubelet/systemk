@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/systemk/internal/provider"
 	nodeapi "github.com/virtual-kubelet/virtual-kubelet/node/api"
@@ -87,20 +88,37 @@ func setupKubeletServer(ctx context.Context, config *provider.Opts, p provider.P
 		}
 
 		// Setup path routing.
-		mux := http.NewServeMux()
-		podRoutes := nodeapi.PodHandlerConfig{
-			RunInContainer:        p.RunInContainer,
-			GetContainerLogs:      p.GetContainerLogs,
-			GetPodsFromKubernetes: getPodsFromKubernetes,
-			GetPods:               p.GetPods,
-			StreamIdleTimeout:     config.StreamIdleTimeout,
-			StreamCreationTimeout: config.StreamCreationTimeout,
-		}
-		nodeapi.AttachPodRoutes(podRoutes, mux, true)
+		r := mux.NewRouter()
+
+		// This matches the behaviour in the reference kubelet
+		r.StrictSlash(true)
+
+		// Setup routes.
+		r.HandleFunc("/pods", nodeapi.HandleRunningPods(getPodsFromKubernetes)).Methods("GET")
+		r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", p.GetContainerLogsHandler).Methods("GET")
+		r.HandleFunc(
+			"/exec/{namespace}/{pod}/{container}",
+			nodeapi.HandleContainerExec(
+				p.RunInContainer,
+				nodeapi.WithExecStreamCreationTimeout(config.StreamCreationTimeout),
+				nodeapi.WithExecStreamIdleTimeout(config.StreamIdleTimeout),
+			),
+		).Methods("POST", "GET")
+
+		// TODO(pires) uncomment this when VK imports k8s.io/kubelet v0.20+
+		//if p.GetStatsSummary != nil {
+		//	f := nodeapi.HandlePodStatsSummary(p.GetStatsSummary)
+		//	r.HandleFunc("/stats/summary", f).Methods("GET")
+		//	r.HandleFunc("/stats/summary/", f).Methods("GET")
+		//}
+
+		r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		})
 
 		// Start the server.
 		s := &http.Server{
-			Handler:   mux,
+			Handler:   r,
 			TLSConfig: tlsCfg,
 		}
 		go serveHTTP(ctx, s, l)

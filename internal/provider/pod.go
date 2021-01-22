@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -291,23 +290,25 @@ func (p *p) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
-// TODO(pires) support follow mode
+// getJournalReader returns the actual journal reader.
+// This is useful when an io.ReadCloser is not enough, eg we need Follow().
+//
 // TODO(pires) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
-func (p *p) GetContainerLogs(ctx context.Context, namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *p) getJournalReader(namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (*sdjournal.JournalReader, error) {
 	fnlog := log.
 		WithField("podNamespace", namespace).
 		WithField("podName", name).
 		WithField("containerName", container)
 
-	fnlog.Debugf("GetContainerLogs called with options %+v", logOpts)
+	fnlog.Infof("calling for container logs with options %+v", logOpts)
 
-	unitname := strings.Join([]string{unitPrefix(namespace, name), container, "service"}, separator)
+	unitName := strings.Join([]string{unitPrefix(namespace, name), container, "service"}, separator)
 	journalConfig := sdjournal.JournalReaderConfig{
 		Matches: []sdjournal.Match{
 			{
 				// Filter by unit.
 				Field: sdjournal.SD_JOURNAL_FIELD_SYSTEMD_UNIT,
-				Value: unitname,
+				Value: unitName,
 			},
 		},
 	}
@@ -337,7 +338,7 @@ func (p *p) GetContainerLogs(ctx context.Context, namespace, name, container str
 
 	journalReader, err := sdjournal.NewJournalReader(journalConfig)
 	if err != nil {
-		fnlog.Error("failed to retrieve logs from journald, for unit %q", unitname, err)
+		fnlog.Error("failed to retrieve logs from journald, for unit %q", unitName, err)
 	}
 
 	return journalReader, err
