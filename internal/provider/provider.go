@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"io"
+	"net/http"
 	"os"
 
 	"github.com/virtual-kubelet/systemk/internal/kubernetes"
@@ -29,8 +29,8 @@ type Provider interface {
 
 	kubernetes.ResourceUpdater
 
-	// GetContainerLogs retrieves the logs of a container by name from the provider.
-	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
+	// GetContainerLogsHandler handles a Pod's container log retrieval.
+	GetContainerLogsHandler(w http.ResponseWriter, r *http.Request)
 
 	// RunInContainer executes a command in a container in the pod, copying data
 	// between in/out/err and the container's stdin/stdout/stderr.
