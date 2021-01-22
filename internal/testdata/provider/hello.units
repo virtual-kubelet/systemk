@@ -13,7 +13,7 @@ ReadOnlyPaths=/
 StandardOutput=journal
 StandardError=journal
 RemainAfterExit=true
-ExecStart=/bin/bash -c "while true; do echo hello; sleep 1; done"
+ExecStart=/bin/bash -c "while true; do date; sleep 5; done"
 TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444
