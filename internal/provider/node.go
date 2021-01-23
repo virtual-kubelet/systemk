@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coreos/go-systemd/v22/util"
 	"github.com/virtual-kubelet/systemk/internal/system"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -26,6 +27,8 @@ func (p *p) ConfigureNode(ctx context.Context, opts *Opts) (*v1.Node, error) {
 		// TODO(pires) wrap the error in a new more meaningful error.
 		return nil, err
 	}
+
+	machineID, _ := util.GetMachineID()
 
 	return &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -58,6 +61,7 @@ func (p *p) ConfigureNode(ctx context.Context, opts *Opts) (*v1.Node, error) {
 				ContainerRuntimeVersion: system.Version(),
 				KernelVersion:           system.Kernel(),
 				KubeletVersion:          opts.Version,
+				MachineID:               machineID,
 				OperatingSystem:         DefaultOperatingSystem,
 				OSImage:                 system.Image(),
 			},
