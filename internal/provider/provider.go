@@ -86,7 +86,8 @@ func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceMan
 		podResourceManager: podWatcher,
 	}
 
-	switch system.ID() {
+	systemID := system.ID()
+	switch systemID {
 	case "debian", "ubuntu":
 		p.pkgManager = new(ospkg.DebianManager)
 
@@ -106,7 +107,7 @@ func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceMan
 	case "arch":
 		p.pkgManager = new(ospkg.ArchLinuxManager)
 	default:
-		log.Warn("failed to detect package manager, no-op enabledw which allows to run binaries already available on the host")
+		log.Warnf("found unsupported package manager in %q, limiting systemk to running existing binaries", systemID)
 		p.pkgManager = new(ospkg.NoopManager)
 	}
 
