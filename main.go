@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/coreos/go-systemd/v22/util"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/systemk/cmd"
 	"github.com/virtual-kubelet/systemk/internal/provider"
@@ -33,6 +34,13 @@ var (
 	buildTime    = "N/A"
 	k8sVersion   = "v1.18.15" // This should follow the version of k8s.io/kubernetes we are importing
 )
+
+func init() {
+	// Fail fast if systemd is not running.
+	if !util.IsRunningSystemd() {
+		panic("systemd is not running, quitting")
+	}
+}
 
 var log = vklogv2.New(nil)
 
