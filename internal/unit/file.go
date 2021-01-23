@@ -84,6 +84,7 @@ func (u *File) String() string {
 }
 
 // Insert adds name=value to section and returns a newly parsed pointer to File.
+// If name is the empty string this is a noop.
 func (u *File) Insert(section, name string, value ...string) *File {
 	opts := make([]*unit.UnitOption, len(value))
 	for i := range opts {
@@ -98,6 +99,7 @@ func (u *File) Insert(section, name string, value ...string) *File {
 }
 
 // Overwrite overwrites name=value in the section and returns a new File.
+// If name is the empty string this is a noop.
 func (u *File) Overwrite(section, name string, value ...string) *File {
 	opts := make([]*unit.UnitOption, len(u.Options))
 	j := 0
@@ -113,6 +115,7 @@ func (u *File) Overwrite(section, name string, value ...string) *File {
 }
 
 // Delete deletes name in the named section and returns a new File.
+// If name is the empty string this is a noop.
 func (u *File) Delete(section, name string) *File {
 	opts := make([]*unit.UnitOption, len(u.Options))
 	j := 0

@@ -224,7 +224,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		}
 		if len(bindmountsro) > 0 {
 			romount := strings.Join(bindmountsro, " ")
-			uf = uf.Insert("Service", "BindReadOnlyPaths", romount)
+			uf = uf.Insert("Service", Option("BindReadOnlyPaths"), romount)
 		}
 
 		for _, del := range deleteOptions {
