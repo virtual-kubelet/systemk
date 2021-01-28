@@ -74,7 +74,7 @@ Has been tested on:
 
 Use `go build` in the top level directory, this should give you a `systemk` binary which is the virtual
 kubelet. Note you'll need to have libsystemd-dev (deb) or systemd-devel (rpm) installed to build
-systemk.
+systemk and you be able to build with CGO.
 
 ## Design
 
