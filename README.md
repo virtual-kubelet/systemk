@@ -73,7 +73,7 @@ Has been tested on:
 ## Building
 
 Use `go build` in the top level directory, this should give you a `systemk` binary which is the virtual
-kubelet. Note you'll need to have libsystem-dev (deb) or systemd-devel (rpm) installed to build
+kubelet. Note you'll need to have libsystemd-dev (deb) or systemd-devel (rpm) installed to build
 systemk.
 
 ## Design
