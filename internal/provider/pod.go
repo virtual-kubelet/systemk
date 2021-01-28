@@ -406,32 +406,37 @@ func unitPrefix(namespace, podName string) string {
 	return prefix + separator + namespace + separator + podName
 }
 
-func Image(name string) string {
-	el := strings.Split(name, separator) // assume well formed
-	if len(el) < 4 {
-		return ""
-	}
-	return el[3]
-}
-
+// Name returns <namespace>.<podname> from a well formed name.
+// Units are named as 'systemk.<namespace>.<podname>.<image> .
 func Name(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}
 	return el[1] + separator + el[2]
 }
 
+// Image returns the <image> from the well formed name. See Name.
+func Image(name string) string {
+	el := strings.Split(name, separator)
+	if len(el) < 4 {
+		return ""
+	}
+	return el[3]
+}
+
+// Pod returns <podname> from the well formed name. See Name.
 func Pod(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}
 	return el[2]
 }
 
+// Namespace returns <namespace> from the well formed name. See Name.
 func Namespace(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}

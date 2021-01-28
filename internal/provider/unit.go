@@ -108,8 +108,8 @@ func (p *p) toContainers(stats map[string]*unit.State) ([]corev1.Container, []co
 		s := stats[k]
 		u, _ := unit.NewFile(s.UnitData)
 		container := v1.Container{
-			Name:      Image(k),
-			Image:     Image(k), // We not saving the image anywhere, this assume container.Name == container.Image
+			Name:      Name(k),
+			Image:     Image(k),
 			Command:   u.Contents["Service"]["ExecStart"],
 			Resources: v1.ResourceRequirements{
 				/*
