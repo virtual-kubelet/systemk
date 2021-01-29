@@ -211,6 +211,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "ClusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "Id", id)
+		uf = uf.Insert(kubernetesSection, "Image", c.Image) // save (cleaned) image name here, we're not tracking this in the unit's name.
 
 		tmpfs := strings.Join(tmp, " ")
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
@@ -407,7 +408,7 @@ func unitPrefix(namespace, podName string) string {
 }
 
 // Name returns <namespace>.<podname> from a well formed name.
-// Units are named as 'systemk.<namespace>.<podname>.<image> .
+// Units are named as 'systemk.<namespace>.<podname>.<container>'.
 func Name(name string) string {
 	el := strings.Split(name, separator)
 	if len(el) < 4 {
@@ -416,8 +417,8 @@ func Name(name string) string {
 	return el[1] + separator + el[2]
 }
 
-// Image returns the <image> from the well formed name. See Name.
-func Image(name string) string {
+// Container returns the <container> from the well formed name. See Name.
+func Container(name string) string {
 	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""

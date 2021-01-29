@@ -109,7 +109,7 @@ func (p *p) toContainers(stats map[string]*unit.State) ([]corev1.Container, []co
 		u, _ := unit.NewFile(s.UnitData)
 		container := v1.Container{
 			Name:      Name(k),
-			Image:     Image(k),
+			Image:     u.Contents[kubernetesSection]["Image"][0],
 			Command:   u.Contents["Service"]["ExecStart"],
 			Resources: v1.ResourceRequirements{
 				/*
@@ -147,8 +147,8 @@ func (p *p) toContainerStatuses(stats map[string]*unit.State) ([]corev1.Containe
 			LastTerminationState: p.containerState(s),
 			Ready:                true, // readiness probes on the container level??
 			RestartCount:         int32(restarts),
-			Image:                Image(k),
-			ImageID:              hash(Image(k)),
+			Image:                u.Contents[kubernetesSection]["Image"][0],
+			ImageID:              hash(u.Contents[kubernetesSection]["Image"][0]),
 			ContainerID:          "pid://" + p.unitManager.ServiceProperty(k, "MainPID"),
 		}
 		if u.Contents[kubernetesSection]["InitContainer"] != nil {
