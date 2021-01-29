@@ -1,0 +1,53 @@
+on:
+  push:
+    tags:
+      - 'release-*'    # Push of a release-* tag
+
+name: Create Release
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Install systemd lib dependencies
+        run: |
+          sudo apt install libsystemd-dev
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: systemk Build
+        run: go build -v ./...
+
+      - name: Get Epoch SHA
+        run: echo "EPOCH=`date '+%s'`" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: tag-${{ env.EPOCH }}
+          release_name: Release-${{ env.EPOCH }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./systemk
+          asset_name: systemk
+          asset_content_type: application/octet-stream
+
+      - name: Delete Older Releases
+        uses: dev-drprasad/delete-older-releases@v0.1.0
+        with:
+          keep_latest: 3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
