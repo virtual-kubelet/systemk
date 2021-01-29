@@ -10,7 +10,7 @@ spec:
   serviceAccountName: prometheus
   containers:
   - name: prometheus
-    image: deb://www.miek.nl/prometheus_2.23.0-0~20.040_amd64.deb
+    image: https://www.miek.nl/prometheus_2.23.0-0~20.040_amd64.deb
     args:
     - "--config.file=/etc/prometheus/prometheus.yml"
     - "--storage.tsdb.path=/tmp/prometheus"

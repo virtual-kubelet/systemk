@@ -27,6 +27,7 @@ Environment=SYSTEMK_NODE_EXTERNAL_IP=172.16.0.1
 Namespace=default
 ClusterName=
 Id=aa-bb
+Image=uptimed
 [Unit]
 Description=systemk
 Documentation=man:systemk(8)
@@ -58,3 +59,4 @@ Environment=SYSTEMK_NODE_EXTERNAL_IP=172.16.0.1
 Namespace=default
 ClusterName=
 Id=aa-bb
+Image=bash

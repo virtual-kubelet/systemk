@@ -211,6 +211,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "Namespace", pod.ObjectMeta.Namespace)
 		uf = uf.Insert(kubernetesSection, "ClusterName", pod.ObjectMeta.ClusterName)
 		uf = uf.Insert(kubernetesSection, "Id", id)
+		uf = uf.Insert(kubernetesSection, "Image", c.Image) // save (cleaned) image name here, we're not tracking this in the unit's name.
 
 		tmpfs := strings.Join(tmp, " ")
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
@@ -406,32 +407,37 @@ func unitPrefix(namespace, podName string) string {
 	return prefix + separator + namespace + separator + podName
 }
 
-func Image(name string) string {
-	el := strings.Split(name, separator) // assume well formed
-	if len(el) < 4 {
-		return ""
-	}
-	return el[3]
-}
-
+// Name returns <namespace>.<podname> from a well formed name.
+// Units are named as 'systemk.<namespace>.<podname>.<container>'.
 func Name(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}
 	return el[1] + separator + el[2]
 }
 
+// Container returns the <container> from the well formed name. See Name.
+func Container(name string) string {
+	el := strings.Split(name, separator)
+	if len(el) < 4 {
+		return ""
+	}
+	return el[3]
+}
+
+// Pod returns <podname> from the well formed name. See Name.
 func Pod(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}
 	return el[2]
 }
 
+// Namespace returns <namespace> from the well formed name. See Name.
 func Namespace(name string) string {
-	el := strings.Split(name, separator) // assume well formed
+	el := strings.Split(name, separator)
 	if len(el) < 4 {
 		return ""
 	}
