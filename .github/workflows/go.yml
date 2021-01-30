@@ -21,6 +21,7 @@ jobs:
       run: |
         sudo apt update
         sudo apt install libsystemd-dev
+
     - name: Get dependencies
       run: |
         go get golang.org/x/lint/golint
