@@ -52,6 +52,7 @@ type p struct {
 	config      *Opts
 	pkgManager  ospkg.Manager
 	unitManager unit.Manager
+	runDir      string // writeable directory under /var/run for configmap/secrets/emptydir mounts
 
 	podResourceManager kubernetes.PodResourceManager
 	kubernetesURL      string // TODO(pires) pass this in Opts
@@ -70,8 +71,10 @@ var unitDir = defaultUnitDir
 // informerFactory is the basis for ConfigMap and Secret retrieval and event handling.
 func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceManager) (Provider, error) {
 	// If running in user-mode, set different folder for storing unit files.
+	runDir := "/var/run"
 	if config.UserMode {
 		unitDir = fmt.Sprintf("/var/run/user/%d/systemk", os.Geteuid())
+		runDir = fmt.Sprintf("/var/run/user/%d", os.Geteuid())
 	}
 	if err := os.MkdirAll(unitDir, 0750); err != nil {
 		return nil, err
@@ -84,6 +87,7 @@ func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceMan
 		unitManager:        unitManager,
 		config:             config,
 		podResourceManager: podWatcher,
+		runDir:             runDir,
 	}
 
 	systemID := system.ID()

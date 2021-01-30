@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	varrun       = "/var/run"
 	emptyDir     = "emptydirs"
 	secretDir    = "secrets"
 	configmapDir = "configmaps"
@@ -32,7 +31,7 @@ const (
 
 // volumes inspects the PodSpec.Volumes attribute and returns a mapping with the volume's Name and the directory on-disk that
 // should be used for this. The on-disk structure is prepared and can be used.
-// which considered what volumes should be setup. Defaults to volumeAll
+// which considered what volumes should be setup. Defaults to volumeAll.
 func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 	fnlog := log.
 		WithField("podNamespace", pod.Namespace).
@@ -56,7 +55,7 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll {
 				continue
 			}
-			dir := filepath.Join(varrun, id)
+			dir := filepath.Join(p.runDir, id)
 			dir = filepath.Join(dir, emptyDir)
 			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
 				return nil, err
@@ -83,7 +82,7 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, id)
+			dir := filepath.Join(p.runDir, id)
 			dir = filepath.Join(dir, secretDir)
 			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
 				return nil, err
@@ -125,7 +124,7 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, id)
+			dir := filepath.Join(p.runDir, id)
 			dir = filepath.Join(dir, configmapDir)
 			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
 				return nil, err
@@ -157,6 +156,11 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 	}
 
 	return vol, nil
+}
+
+func (p *p) cleanPodEphemeralVolumes(podId string) error {
+	podEphemeralVolumes := filepath.Join(p.runDir, podId)
+	return os.RemoveAll(podEphemeralVolumes)
 }
 
 func isEmpty(name string) (bool, error) {
@@ -216,7 +220,6 @@ func writeFile(dir, file, uid, gid string, data []byte) error {
 
 // chown chowns name with uid and gid.
 func chown(name, uid, gid string) error {
-	// we're parsing uid/gid back and forth
 	uidn, err := strconv.ParseInt(uid, 10, 64)
 	if err != nil {
 		uidn = -1
@@ -227,11 +230,6 @@ func chown(name, uid, gid string) error {
 	}
 
 	return os.Chown(name, int(uidn), int(gidn))
-}
-
-func cleanPodEphemeralVolumes(podId string) error {
-	podEphemeralVolumes := filepath.Join(varrun, podId)
-	return os.RemoveAll(podEphemeralVolumes)
 }
 
 // isBelowPath returns true if path is below top.
