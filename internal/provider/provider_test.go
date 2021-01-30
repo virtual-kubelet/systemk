@@ -2,9 +2,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,7 +24,7 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	p := new(p)
 	p.pkgManager = &ospkg.NoopManager{}
 	p.unitManager, _ = unit.NewMockManager()
-	p.runDir = fmt.Sprintf("/var/run/user/%d", os.Geteuid())
+	p.runDir = "/var/run"
 	p.config = &Opts{
 		AllowedHostPaths: DefaultAllowedPaths,
 		NodeName:         "localhost",
