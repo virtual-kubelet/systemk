@@ -19,6 +19,7 @@ package cmd
 import (
 	"flag"
 	"net"
+	"os"
 
 	"github.com/spf13/pflag"
 	"github.com/virtual-kubelet/systemk/internal/provider"
@@ -31,9 +32,14 @@ import (
 var log = vklogv2.New(nil)
 
 func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "systemk"
+	}
+
 	flags.StringVar(&c.KubeConfigPath, "kubeconfig", "", "cluster client configuration")
 	flags.StringVar(&c.KubeClusterDomain, "cluster-domain", provider.DefaultKubeClusterDomain, "cluster domain")
-	flags.StringVar(&c.NodeName, "nodename", "systemk", "value to be set as the Node name and label node.k8s.io/hostname")
+	flags.StringVar(&c.NodeName, "nodename", hostname, "value to be set as the Node name and label node.k8s.io/hostname")
 	flags.StringVar(&c.ListenAddress, "addr", provider.DefaultListenAddr, "address to bind for serving requests from the Kubernetes API server")
 	flags.StringVar(&c.MetricsAddr, "metrics-addr", provider.DefaultMetricsAddr, "address to listen for metrics/stats requests")
 	flags.IntVar(&c.PodSyncWorkers, "pod-sync-workers", provider.DefaultPodSyncWorkers, `number of pod synchronization workers`)
@@ -48,6 +54,7 @@ func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
 	flags.IPVar(&c.NodeExternalIP, "external-ip", net.IPv4zero, "IP address to advertise as Node ExternalIP, 0.0.0.0 means auto-detect")
 	flags.StringSliceVarP(&c.AllowedHostPaths, "dir", "d", provider.DefaultAllowedPaths, "only allow mounts below these directories")
 	flags.BoolVarP(&c.UserMode, "user", "u", false, "rely on the user's systemd")
+	flags.BoolVarP(&c.DisableTaint, "disable-taint", "", false, "disable the node taint")
 
 	// Since klog is the logger implementation, install its flags.
 	// But prepend "klog." to the flag name for clear separation.

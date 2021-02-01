@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/coreos/go-systemd/v22/sdjournal"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/systemk/internal/ospkg"
 	"github.com/virtual-kubelet/systemk/internal/unit"
@@ -291,6 +289,7 @@ func (p *p) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
+/*
 // getJournalReader returns the actual journal reader.
 // This is useful when an io.ReadCloser is not enough, eg we need Follow().
 //
@@ -344,6 +343,7 @@ func (p *p) getJournalReader(namespace, name, container string, logOpts nodeapi.
 
 	return journalReader, err
 }
+*/
 
 // UpdatePod is a noop,
 func (p *p) UpdatePod(ctx context.Context, pod *corev1.Pod) error {

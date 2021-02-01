@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coreos/go-systemd/v22/sdjournal"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -33,14 +32,12 @@ func (p *p) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 
 		r.Header.Set("Transfer-Encoding", "chunked")
 
-		// Retrieve the actual systemd journal reader given:
-		// * it implements io.ReadCloser, and
-		// * exposes other functionality, like follow mode.
-		logsReader, err := p.getJournalReader(namespace, pod, container, opts)
+		logsReader, cancel, err := journalReader(namespace, pod, container, opts)
 		if err != nil {
 			return errors.Wrap(err, "failed to get systemd journal logs reader")
 		}
 		defer logsReader.Close()
+		defer cancel()
 
 		// ResponseWriter must be flushed after each write.
 		if _, ok := w.(writeFlusher); !ok {
@@ -48,33 +45,30 @@ func (p *p) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		fw := flushOnWrite(w)
 
-		// If in follow mode, follow until interrupted.
-		if opts.Follow {
-			untilTime := make(chan time.Time, 1)
-			errChan := make(chan error, 1)
-
-			go func(w io.Writer, errChan chan error) {
-				err := logsReader.Follow(untilTime, w)
-				if err != nil && err != sdjournal.ErrExpired {
-					err = errors.Wrap(err, "failed to follow systemd journal logs")
-				}
-				errChan <- err
-			}(fw, errChan)
-
-			// Stop following logs if request context is completed.
-			select {
-			case err := <-errChan:
-				return err
-			case <-r.Context().Done():
-				close(untilTime)
-			}
-			return nil
-
-			// Otherwise, just pipe the journal reader.
-		} else {
+		if !opts.Follow {
 			io.Copy(fw, logsReader)
+			return nil
 		}
 
+		// If in follow mode, follow until interrupted.
+		untilTime := make(chan time.Time, 1)
+		errChan := make(chan error, 1)
+
+		go func(w io.Writer, errChan chan error) {
+			err := journalFollow(untilTime, logsReader, w)
+			if err != nil && err != ErrExpired {
+				err = errors.Wrap(err, "failed to follow systemd journal logs")
+			}
+			errChan <- err
+		}(fw, errChan)
+
+		// Stop following logs if request context is completed.
+		select {
+		case err := <-errChan:
+			return err
+		case <-r.Context().Done():
+			close(untilTime)
+		}
 		return nil
 	})(w, r)
 }
