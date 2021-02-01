@@ -289,62 +289,6 @@ func (p *p) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
-/*
-// getJournalReader returns the actual journal reader.
-// This is useful when an io.ReadCloser is not enough, eg we need Follow().
-//
-// TODO(pires) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
-func (p *p) getJournalReader(namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (*sdjournal.JournalReader, error) {
-	fnlog := log.
-		WithField("podNamespace", namespace).
-		WithField("podName", name).
-		WithField("containerName", container)
-
-	fnlog.Infof("calling for container logs with options %+v", logOpts)
-
-	unitName := strings.Join([]string{unitPrefix(namespace, name), container, "service"}, separator)
-	journalConfig := sdjournal.JournalReaderConfig{
-		Matches: []sdjournal.Match{
-			{
-				// Filter by unit.
-				Field: sdjournal.SD_JOURNAL_FIELD_SYSTEMD_UNIT,
-				Value: unitName,
-			},
-		},
-	}
-	if logOpts.SinceSeconds > 0 {
-		// Since duration must be negative so we get logs from the past.
-		journalConfig.Since = -time.Second * time.Duration(logOpts.SinceSeconds)
-	}
-	// By default, SinceTime is "0001-01-01 00:00:00 +0000 UTC".
-	if !logOpts.SinceTime.IsZero() {
-		journalConfig.Since = time.Since(logOpts.SinceTime)
-	}
-	if logOpts.Tail > 0 {
-		journalConfig.NumFromTail = uint64(logOpts.Tail)
-	}
-	// By default, timestamps are present in journal entries.
-	// Kubernetes defaults to not having timestamps, so we adapt.
-	if !logOpts.Timestamps {
-		journalConfig.Formatter = func(entry *sdjournal.JournalEntry) (string, error) {
-			msg, ok := entry.Fields[sdjournal.SD_JOURNAL_FIELD_MESSAGE]
-			if !ok {
-				return "", fmt.Errorf("no %q field present in journal entry", sdjournal.SD_JOURNAL_FIELD_MESSAGE)
-			}
-
-			return fmt.Sprintf("%s\n", msg), nil
-		}
-	}
-
-	journalReader, err := sdjournal.NewJournalReader(journalConfig)
-	if err != nil {
-		fnlog.Error("failed to retrieve logs from journald, for unit %q", unitName, err)
-	}
-
-	return journalReader, err
-}
-*/
-
 // UpdatePod is a noop,
 func (p *p) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	log.

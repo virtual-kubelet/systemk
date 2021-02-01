@@ -37,12 +37,23 @@ func journalReader(namespace, name, container string, logOpts nodeapi.ContainerL
 	if !logOpts.Timestamps {
 		args = append(args, "-o")
 		args = append(args, "cat")
-	} // no else clause, is the default sane enough?
-
+	} else {
+		args = append(args, "-o")
+		args = append(args, "short-full") // this is _not_ the default Go timestamp output
+	}
+	if logOpts.SinceSeconds > 0 {
+		args = append(args, "-S")
+		args = append(args, fmt.Sprintf("-%ds", logOpts.SinceSeconds))
+	}
+	if !logOpts.SinceTime.IsZero() {
+		args = append(args, "-S")
+		args = append(args, logOpts.SinceTime.Format(time.RFC3339))
+	}
 	// Previous might not be possible to implement
-	// SinceSeconds, SinceTime should be doable
-	// LimitBytes - unsure.
+	// TODO(pires,miek) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
+	// LimitBytes - unsure (maybe a io.CopyBuffer?)
 
+	fnlog.Debugf("about to execute %q %v", journalctl, args)
 	cmd := exec.Command(journalctl, args...)
 	p, err := cmd.StdoutPipe()
 	if err != nil {
