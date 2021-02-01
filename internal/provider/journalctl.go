@@ -26,7 +26,7 @@ func journalReader(namespace, name, container string, logOpts nodeapi.ContainerL
 	unitName := strings.Join([]string{unitPrefix(namespace, name), container, "service"}, separator)
 
 	// Handle all the options.
-	args := []string{"-u", unitName}
+	args := []string{"-u", unitName, "--no-hostname"} // only works with -o short-xxx options.
 	if logOpts.Tail > 0 {
 		args = append(args, "-n")
 		args = append(args, fmt.Sprintf("%d", logOpts.Tail))
