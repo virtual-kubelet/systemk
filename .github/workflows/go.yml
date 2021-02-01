@@ -17,11 +17,6 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
-    - name: Install systemd lib dependencies
-      run: |
-        sudo apt update
-        sudo apt install libsystemd-dev
-
     - name: Get dependencies
       run: |
         go get golang.org/x/lint/golint
