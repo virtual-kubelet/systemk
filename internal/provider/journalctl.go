@@ -53,7 +53,7 @@ func journalReader(namespace, name, container string, logOpts nodeapi.ContainerL
 	// TODO(pires,miek) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
 	// LimitBytes - unsure (maybe a io.CopyBuffer?)
 
-	fnlog.Debugf("about to execute %q %v", journalctl, args)
+	fnlog.Debugf("getting container logs via: %q %v", journalctl, args)
 	cmd := exec.Command(journalctl, args...)
 	p, err := cmd.StdoutPipe()
 	if err != nil {
