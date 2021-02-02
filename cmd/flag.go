@@ -32,11 +32,6 @@ import (
 var log = vklogv2.New(nil)
 
 func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
-	hostname, _ := os.Hostname()
-	if hostname == "" {
-		hostname = "systemk"
-	}
-
 	flags.StringVar(&c.KubeConfigPath, "kubeconfig", "", "cluster client configuration")
 	flags.StringVar(&c.KubeClusterDomain, "cluster-domain", provider.DefaultKubeClusterDomain, "cluster domain")
 	flags.StringVar(&c.NodeName, "nodename", "", "value to be set as the Node name and label node.k8s.io/hostname")
