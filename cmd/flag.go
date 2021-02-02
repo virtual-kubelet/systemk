@@ -39,7 +39,7 @@ func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
 
 	flags.StringVar(&c.KubeConfigPath, "kubeconfig", "", "cluster client configuration")
 	flags.StringVar(&c.KubeClusterDomain, "cluster-domain", provider.DefaultKubeClusterDomain, "cluster domain")
-	flags.StringVar(&c.NodeName, "nodename", hostname, "value to be set as the Node name and label node.k8s.io/hostname")
+	flags.StringVar(&c.NodeName, "nodename", "", "value to be set as the Node name and label node.k8s.io/hostname")
 	flags.StringVar(&c.ListenAddress, "addr", provider.DefaultListenAddr, "address to bind for serving requests from the Kubernetes API server")
 	flags.StringVar(&c.MetricsAddr, "metrics-addr", provider.DefaultMetricsAddr, "address to listen for metrics/stats requests")
 	flags.IntVar(&c.PodSyncWorkers, "pod-sync-workers", provider.DefaultPodSyncWorkers, `number of pod synchronization workers`)
