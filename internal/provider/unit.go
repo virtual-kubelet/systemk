@@ -108,7 +108,7 @@ func (p *p) toContainers(stats map[string]*unit.State) ([]corev1.Container, []co
 		s := stats[k]
 		u, _ := unit.NewFile(s.UnitData)
 		container := v1.Container{
-			Name:      Name(k),
+			Name:      Container(k),
 			Image:     u.Contents[kubernetesSection]["Image"][0],
 			Command:   u.Contents["Service"]["ExecStart"],
 			Resources: v1.ResourceRequirements{
@@ -142,7 +142,7 @@ func (p *p) toContainerStatuses(stats map[string]*unit.State) ([]corev1.Containe
 		u, _ := unit.NewFile(s.UnitData)
 		restarts, _ := strconv.Atoi(p.unitManager.ServiceProperty(k, "NRestarts"))
 		status := v1.ContainerStatus{
-			Name:                 Name(k),
+			Name:                 Container(k),
 			State:                p.containerState(s),
 			LastTerminationState: p.containerState(s),
 			Ready:                true, // readiness probes on the container level??
