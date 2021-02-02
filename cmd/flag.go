@@ -19,7 +19,6 @@ package cmd
 import (
 	"flag"
 	"net"
-	"os"
 
 	"github.com/spf13/pflag"
 	"github.com/virtual-kubelet/systemk/internal/provider"
