@@ -382,7 +382,7 @@ func (p *p) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	p.podResourceManager.Unwatch(pod)
 
 	// Clean-up volumes.
-	if err := cleanPodEphemeralVolumes(string(pod.UID)); err != nil {
+	if err := p.cleanPodEphemeralVolumes(string(pod.UID)); err != nil {
 		fnlog.Warn("failed to clean-up volumes: %s", err)
 	}
 
