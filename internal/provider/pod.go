@@ -173,18 +173,14 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
-		// If there is a securityContext we'll use that.
-		// But if in user-mode, we delete any user/group settings.
-		if p.config.UserMode {
-			uf = uf.Delete("Service", "User")
-			uf = uf.Delete("Service", "Group")
-		} else {
-			if uid != "" {
-				uf = uf.Overwrite("Service", "User", uid)
-			}
-			if gid != "" {
-				uf = uf.Overwrite("Service", "Group", gid)
-			}
+		// TODO(miek): double check when this is empty and close that loophole, i.e. a service file
+		// that allows running as root and no SecurityContext in the pod spec, this must the map-root
+		// flag into account as well.
+		if uid != "" {
+			uf = uf.Overwrite("Service", "User", uid)
+		}
+		if gid != "" {
+			uf = uf.Overwrite("Service", "Group", gid)
 		}
 
 		// Treat initContainer differently.

@@ -61,14 +61,8 @@ type manager struct {
 var _ Manager = (*manager)(nil)
 
 // NewManager returns an initialized dBus unit manager.
-func NewManager(uDir string, systemdUser bool) (Manager, error) {
-	var systemd *dbus.Conn
-	var err error
-	if systemdUser {
-		systemd, err = dbus.NewUserConnection()
-	} else {
-		systemd, err = dbus.New()
-	}
+func NewManager(uDir string) (Manager, error) {
+	systemd, err := dbus.New()
 	if err != nil {
 		return nil, err
 	}
