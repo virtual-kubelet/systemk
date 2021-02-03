@@ -77,7 +77,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	}
 
 	uid, gid := uidGidFromSecurityContext(pod)
-	tmp := []string{"/var", "/run"}
+	tmpfs := strings.Join([]string{"/var", "/run"}, " ")
 
 	unitsToStart := []string{}
 	previousUnit := ""
@@ -170,6 +170,9 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Overwrite("Service", "ProtectHome", "tmpfs")
 		uf = uf.Overwrite("Service", "PrivateMounts", "true")
 		uf = uf.Overwrite("Service", "ReadOnlyPaths", "/")
+		uf = uf.Overwrite("Service", "NoNewPrivileges", "true")
+		// ProtectKernelModules? ProtectKernelTunables??
+		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
@@ -213,8 +216,6 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "Id", id)
 		uf = uf.Insert(kubernetesSection, "Image", c.Image) // save (cleaned) image name here, we're not tracking this in the unit's name.
 
-		tmpfs := strings.Join(tmp, " ")
-		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
 		if len(rwpaths) > 0 {
 			paths := strings.Join(rwpaths, " ")
 			uf = uf.Insert("Service", "ReadWritePaths", paths)

@@ -10,13 +10,14 @@ ProtectSystem=true
 ProtectHome=tmpfs
 PrivateMounts=true
 ReadOnlyPaths=/
+NoNewPrivileges=true
+TemporaryFileSystem=/var /run
 StandardOutput=journal
 StandardError=journal
 User=0
 Group=0
 RemainAfterExit=true
 ExecStart= "--config.file=/etc/prometheus/prometheus.yml" "--storage.tsdb.path=/tmp/prometheus"
-TemporaryFileSystem=/var /run
 Environment=HOSTNAME=localhost
 Environment=KUBERNETES_SERVICE_PORT=6444
 Environment=KUBERNETES_SERVICE_HOST=127.0.0.1
