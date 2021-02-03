@@ -100,9 +100,6 @@ type Opts struct {
 	// StreamCreationTimeout is the maximum time for streaming connection.
 	StreamCreationTimeout time.Duration
 
-	// UserMode is whether to use the user's systemd or the system's.
-	UserMode bool
-
 	// Version carries the systemk version.
 	Version string
 }

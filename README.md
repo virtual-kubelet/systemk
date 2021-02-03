@@ -113,8 +113,6 @@ If the image name starts with a `/` it's assumed to be a path to a binary that e
 nothing is installed in that case. Basically this tells systemk that the image is not used. This can
 serve as documentation. It's likely command and/or args in the podspec will reference the same path.
 
-This mode helps in running systemk as a non-root user.
-
 ### Addresses
 
 Addresses are configured with one the systemk command line flags: `--node-ip` and
