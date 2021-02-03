@@ -39,7 +39,7 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 	vol := make(map[string]string)
 	id := string(pod.ObjectMeta.UID)
-	uid, gid, err := uidGidFromSecurityContext(pod, p.config.MapRoot)
+	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
 	if err != nil {
 		return nil, err
 	}

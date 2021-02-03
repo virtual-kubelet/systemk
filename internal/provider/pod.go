@@ -76,7 +76,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
-	uid, gid, err := uidGidFromSecurityContext(pod, p.config.MapRoot)
+	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
 	if err != nil {
 		return err
 	}
