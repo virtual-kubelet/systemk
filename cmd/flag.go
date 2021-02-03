@@ -55,10 +55,11 @@ func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
 	flagset := flag.NewFlagSet("klog", flag.PanicOnError)
 	klog.InitFlags(flagset)
 	flagset.VisitAll(func(f *flag.Flag) {
-		// only do the v flag, as the klog flags dominate our binary.
-		if f.Name == "v" {
-			f.Name = "klog." + f.Name
-			flags.AddGoFlag(f)
+		// Only show the v flag, as the klog flags dominate the help output.
+		f.Name = "klog." + f.Name
+		flags.AddGoFlag(f)
+		if f.Name != "klog.v" {
+			flags.MarkHidden(f.Name)
 		}
 	})
 }
