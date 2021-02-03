@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/user"
+	"strconv"
 	"strings"
 	"time"
 
@@ -76,10 +78,23 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
+	// User/group handling. If the podspec has a security context we use that. This takes into acount the --override-root-uid flag value.
+	// If these are not set, the unit file's value are used. Note if the unit file doesn't specify it, it *defaults*
+	// to root, but we only care about that when a root override is set.
 	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
 	if err != nil {
 		return err
 	}
+	if uid == "" && p.config.OverrideRootUID > 0 {
+		mapuid := strconv.FormatInt(int64(p.config.OverrideRootUID), 10)
+		u, err := user.LookupId(mapuid)
+		if err != nil {
+			return fmt.Errorf("root override UID %q, not found: %s", mapuid, err)
+		}
+		uid = u.Uid
+		gid = u.Gid
+	}
+
 	tmp := []string{"/var", "/run"}
 
 	unitsToStart := []string{}
@@ -176,13 +191,8 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert("Service", "StandardOutput", "journal")
 		uf = uf.Insert("Service", "StandardError", "journal")
 
-		// TODO(miek): double check when this is empty and close that loophole, i.e. a service file
-		// that allows running as root and no SecurityContext in the pod spec, this must the map-root
-		// flag into account as well.
 		if uid != "" {
 			uf = uf.Overwrite("Service", "User", uid)
-		}
-		if gid != "" {
 			uf = uf.Overwrite("Service", "Group", gid)
 		}
 

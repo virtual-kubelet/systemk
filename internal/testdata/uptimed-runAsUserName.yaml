@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: uptimed
+  labels:
+    name: uptimed
+spec:
+  securityContext:
+    windowsOptions:
+      runAsUserName: "root"
+  containers:
+  - name: uptimed
+    image: uptimed
+    volumeMounts:
+    - mountPath: /etc/uptimed
+      name: uptimed-conf-volume
+  volumes:
+  - name: uptimed-conf-volume
+    configMap:
+      defaultMode: 420
+      name: uptimed-conf
