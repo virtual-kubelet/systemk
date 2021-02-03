@@ -83,7 +83,7 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
-	tmp := []string{"/var", "/run"}
+	tmpfs := strings.Join([]string{"/var", "/run"}, " ")
 
 	unitsToStart := []string{}
 	previousUnit := ""
@@ -232,7 +232,6 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		uf = uf.Insert(kubernetesSection, "Id", id)
 		uf = uf.Insert(kubernetesSection, "Image", c.Image) // save (cleaned) image name here, we're not tracking this in the unit's name.
 
-		tmpfs := strings.Join(tmp, " ")
 		uf = uf.Insert("Service", "TemporaryFileSystem", tmpfs)
 		if len(rwpaths) > 0 {
 			paths := strings.Join(rwpaths, " ")
