@@ -103,6 +103,9 @@ type Opts struct {
 	// UserMode is whether to use the user's systemd or the system's.
 	UserMode bool
 
+	// MapRoot maps the root user to this UID (defaults to 0).
+	MapRoot int
+
 	// Version carries the systemk version.
 	Version string
 }

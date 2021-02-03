@@ -37,6 +37,7 @@ func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
 	flags.StringVar(&c.ListenAddress, "addr", provider.DefaultListenAddr, "address to bind for serving requests from the Kubernetes API server")
 	flags.StringVar(&c.MetricsAddr, "metrics-addr", provider.DefaultMetricsAddr, "address to listen for metrics/stats requests")
 	flags.IntVar(&c.PodSyncWorkers, "pod-sync-workers", provider.DefaultPodSyncWorkers, `number of pod synchronization workers`)
+	flags.IntVar(&c.MapRoot, "map-root", 0, "map the root user to this UID")
 	flags.DurationVar(&c.InformerResyncPeriod, "full-resync-period", provider.DefaultInformerResyncPeriod, "interval period for recurring listing of all Pods assigned to this Node")
 	flags.DurationVar(&c.StreamIdleTimeout, "stream-idle-timeout", provider.DefaultStreamIdleTimeout,
 		"maximum time a streaming connection can be idle before the connection is automatically closed")

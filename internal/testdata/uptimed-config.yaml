@@ -6,7 +6,7 @@ metadata:
     name: uptimed
 spec:
   securityContext:
-    runAsUser: 1
+    runAsUser: 0
   containers:
   - name: uptimed
     image: uptimed
