@@ -40,7 +40,10 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 
 	vol := make(map[string]string)
 	id := string(pod.ObjectMeta.UID)
-	uid, gid := uidGidFromSecurityContext(pod)
+	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
+	if err != nil {
+		return nil, err
+	}
 	for i, v := range pod.Spec.Volumes {
 		fnlog.Debugf("looking at volume %q#%d", v.Name, i)
 		switch {

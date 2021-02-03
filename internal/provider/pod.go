@@ -76,7 +76,10 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
-	uid, gid := uidGidFromSecurityContext(pod)
+	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
+	if err != nil {
+		return err
+	}
 	tmp := []string{"/var", "/run"}
 
 	unitsToStart := []string{}

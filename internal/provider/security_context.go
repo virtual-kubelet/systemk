@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"os/user"
 	"strconv"
 
@@ -11,15 +12,18 @@ import (
 // If windowsOptions are set, the uid and gid *names* found there are returned. This takes
 // precedence over the values runAsUser and runAsGroup.
 // If the uid is found, but gid is not, the primary group for uid is searched and returned.
-func uidGidFromSecurityContext(pod *corev1.Pod) (uid string, gid string) {
+func uidGidFromSecurityContext(pod *corev1.Pod, maproot int) (uid, gid string, err error) {
 	if pod.Spec.SecurityContext == nil {
-		return "", ""
+		return "", "", nil
 	}
 	u := &user.User{}
 	s := pod.Spec.SecurityContext
 	if s.RunAsUser != nil {
 		uid = strconv.FormatInt(*s.RunAsUser, 10)
-		u, _ = user.LookupId(uid)
+		u, err = user.LookupId(uid)
+		if err != nil {
+			return "", "", err
+		}
 	}
 	if s.RunAsGroup != nil {
 		gid = strconv.FormatInt(*s.RunAsGroup, 10)
@@ -27,19 +31,31 @@ func uidGidFromSecurityContext(pod *corev1.Pod) (uid string, gid string) {
 	if s.WindowsOptions != nil {
 		if s.WindowsOptions.RunAsUserName != nil {
 			uid = *s.WindowsOptions.RunAsUserName
-			u, _ = user.Lookup(uid)
-			if u != nil {
-				uid = u.Uid
+			u, err = user.Lookup(uid)
+			if err != nil {
+				return "", "", err
 			}
+			uid = u.Uid
 		}
 	}
 
-	// if uid is set, but gid is return the default group for uid.
+	// if uid is set, but gid isn't, return the primary group for uid.
 	if uid != "" && gid == "" {
 		if u != nil {
 			gid = u.Gid
 		}
 	}
 
-	return uid, gid
+	// Check if maproot is set and convert.
+	if uid == "0" && maproot > 0 {
+		mapuid := strconv.FormatInt(int64(maproot), 10)
+		u, err = user.LookupId(mapuid)
+		if err != nil {
+			return "", "", fmt.Errorf("MapRoot's UID %q, not found: %s", mapuid, err)
+		}
+		uid = u.Uid
+		gid = u.Gid
+	}
+
+	return uid, gid, nil
 }

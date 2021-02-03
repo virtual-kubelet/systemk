@@ -17,6 +17,7 @@
 package provider
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -100,13 +101,16 @@ type Opts struct {
 	// StreamCreationTimeout is the maximum time for streaming connection.
 	StreamCreationTimeout time.Duration
 
+	// OverrideRootUID maps the root user to this UID (defaults to 0).
+	OverrideRootUID int
+
 	// Version carries the systemk version.
 	Version string
 }
 
 // SetDefaultOpts sets default options for unset values of the passed in option struct.
 // Fields that are already set will not be modified.
-func SetDefaultOpts(opts *Opts) {
+func SetDefaultOpts(opts *Opts) error {
 	if len(opts.AllowedHostPaths) == 0 {
 		opts.AllowedHostPaths = DefaultAllowedPaths
 	}
@@ -158,6 +162,12 @@ func SetDefaultOpts(opts *Opts) {
 	if len(opts.AllowedHostPaths) == 0 {
 		opts.AllowedHostPaths = DefaultAllowedPaths
 	}
+
+	if opts.OverrideRootUID < 0 {
+		return fmt.Errorf("the value for --override-root-uid must be positive: %d", opts.OverrideRootUID)
+	}
+
+	return nil
 }
 
 // getEnvOrDefault returns environment variable value or if unset, a default value.
