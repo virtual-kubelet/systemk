@@ -24,7 +24,6 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	p := new(p)
 	p.pkgManager = &ospkg.NoopManager{}
 	p.unitManager, _ = unit.NewMockManager()
-	p.runDir = "/var/run"
 	p.config = &Opts{
 		AllowedHostPaths: DefaultAllowedPaths,
 		NodeName:         "localhost",

@@ -101,9 +101,6 @@ type Opts struct {
 	// StreamCreationTimeout is the maximum time for streaming connection.
 	StreamCreationTimeout time.Duration
 
-	// UserMode is whether to use the user's systemd or the system's.
-	UserMode bool
-
 	// OverrideRootUID maps the root user to this UID (defaults to 0).
 	OverrideRootUID int
 

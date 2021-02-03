@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -52,7 +51,6 @@ type p struct {
 	config      *Opts
 	pkgManager  ospkg.Manager
 	unitManager unit.Manager
-	runDir      string // writeable directory under /var/run for configmap/secrets/emptydir mounts
 
 	podResourceManager kubernetes.PodResourceManager
 	kubernetesURL      string // TODO(pires) pass this in Opts
@@ -63,23 +61,13 @@ var _ Provider = (*p)(nil)
 
 const defaultUnitDir = "/var/run/systemk"
 
-// unitDir is where systemk stores the modified unit files.
-// Its value changes if systemk is running in user-mode.
-var unitDir = defaultUnitDir
-
 // New returns a new systemd provider.
 // informerFactory is the basis for ConfigMap and Secret retrieval and event handling.
 func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceManager) (Provider, error) {
-	// If running in user-mode, set different folder for storing unit files.
-	runDir := "/var/run"
-	if config.UserMode {
-		unitDir = fmt.Sprintf("/var/run/user/%d/systemk", os.Geteuid())
-		runDir = fmt.Sprintf("/var/run/user/%d", os.Geteuid())
-	}
-	if err := os.MkdirAll(unitDir, 0750); err != nil {
+	if err := os.MkdirAll(defaultUnitDir, 0750); err != nil {
 		return nil, err
 	}
-	unitManager, err := unit.NewManager(unitDir, config.UserMode)
+	unitManager, err := unit.NewManager(defaultUnitDir)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +75,6 @@ func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceMan
 		unitManager:        unitManager,
 		config:             config,
 		podResourceManager: podWatcher,
-		runDir:             runDir,
 	}
 
 	systemID := system.ID()
@@ -95,10 +82,6 @@ func New(ctx context.Context, config *Opts, podWatcher kubernetes.PodResourceMan
 	case "debian", "ubuntu":
 		p.pkgManager = new(ospkg.DebianManager)
 
-		// Check if we're root and otherwise skip this step.
-		if os.Geteuid() != 0 {
-			break
-		}
 		// Just installed pre-requisites instead of pointing to the docs.
 		log.Infof("installing %s, to prevent installed daemons from starting", "policyrcd-script-zg2")
 		ok, err := p.pkgManager.Install("policyrcd-script-zg2", "")

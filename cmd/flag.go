@@ -48,7 +48,6 @@ func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
 	flags.IPVar(&c.NodeInternalIP, "internal-ip", net.IPv4zero, "IP address to advertise as Node InternalIP, 0.0.0.0 means auto-detect")
 	flags.IPVar(&c.NodeExternalIP, "external-ip", net.IPv4zero, "IP address to advertise as Node ExternalIP, 0.0.0.0 means auto-detect")
 	flags.StringSliceVarP(&c.AllowedHostPaths, "dir", "d", provider.DefaultAllowedPaths, "only allow mounts below these directories")
-	flags.BoolVarP(&c.UserMode, "user", "u", false, "rely on the user's systemd")
 	flags.BoolVarP(&c.DisableTaint, "disable-taint", "", false, "disable the node taint")
 
 	// Since klog is the logger implementation, install its flags.
