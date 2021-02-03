@@ -58,7 +58,9 @@ func main() {
 
 	// Default systemk provider configuration.
 	var opts provider.Opts
-	provider.SetDefaultOpts(&opts)
+	if err := provider.SetDefaultOpts(&opts); err != nil {
+		log.Fatal(err)
+	}
 	// The Kubernetes version systemk tracks.
 	// This is important because of Kubernetes version skew policy.
 	// See https://kubernetes.io/docs/setup/release/version-skew-policy/#kubelet
@@ -72,6 +74,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Info("system exited gracefully")
-
+	log.Info("systemk exited gracefully")
 }
