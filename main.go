@@ -56,19 +56,21 @@ func main() {
 	// Setup VK logger.
 	vklog.L = vklogv2.New(map[string]interface{}{"source": "virtual-kubelet"})
 
+	opts := &provider.Opts{}
+	// Setup the root systemk CLI command.
+	rootCmd := cmd.NewRootCommand(ctx, filepath.Base(os.Args[0]), opts)
+	// Setup flags.
+	cmd.InstallFlags(rootCmd.Flags(), opts)
 	// Default systemk provider configuration.
-	var opts provider.Opts
-	if err := provider.SetDefaultOpts(&opts); err != nil {
+	if err := provider.SetDefaultOpts(opts); err != nil {
 		log.Fatal(err)
 	}
 	// The Kubernetes version systemk tracks.
 	// This is important because of Kubernetes version skew policy.
 	// See https://kubernetes.io/docs/setup/release/version-skew-policy/#kubelet
 	opts.Version = k8sVersion
-
-	// Setup the root systemk CLI command.
-	rootCmd := cmd.NewRootCommand(ctx, filepath.Base(os.Args[0]), &opts)
 	rootCmd.AddCommand(cmd.NewVersionCommand(buildVersion, buildTime))
+
 	// And fire up engines!
 	if err := rootCmd.Execute(); err != nil && errors.Cause(err) != context.Canceled {
 		log.Fatal(err)
