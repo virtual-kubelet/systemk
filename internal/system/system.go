@@ -157,3 +157,25 @@ func IPs() []net.IP {
 	}
 	return a
 }
+
+// IPFromInterface returns the first address found on the interface named name.
+func IPFromInterface(name string) (net.IP, error) {
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		return nil, err
+	}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, fmt.Errorf("failed to find addresses on interface %q", name)
+	}
+	switch v := addrs[0].(type) {
+	case *net.IPNet:
+		return v.IP, nil
+	case *net.IPAddr:
+		return v.IP, nil
+	}
+	return nil, fmt.Errorf("neither net or address found on interface %q", name)
+}

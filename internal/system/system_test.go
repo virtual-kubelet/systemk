@@ -69,3 +69,13 @@ func TestID(t *testing.T) {
 		}
 	}
 }
+
+func TestIPFromIface(t *testing.T) {
+	ip, err := IPFromInterface("lo")
+	if err != nil {
+		t.Error(err)
+	}
+	if !ip.IsLoopback() {
+		t.Errorf("Expected loopback IP on %q, got %s", "lo", ip)
+	}
+}
