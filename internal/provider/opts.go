@@ -59,6 +59,12 @@ type Opts struct {
 	// NodeExternalIP is the desired Node external IP.
 	NodeExternalIP net.IP
 
+	// NodeInternalIface is interface's name whose address to use for Node internal IP.
+	NodeInternalIface string
+
+	// NodeExternalIface is the interface's name whose address to use for Node external IP.
+	NodeExternalIface string
+
 	// AllowedHostPaths is a list of host paths that are allowed to be mounted.
 	AllowedHostPaths []string
 

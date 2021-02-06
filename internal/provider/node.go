@@ -99,39 +99,57 @@ func computeNodeAddresses(config *Opts) ([]corev1.NodeAddress, error) {
 	var nodeAddresses []corev1.NodeAddress
 	var errs []error
 
-	// If specified IP is 0.0.0.0, return auto-detected internal IPs.
-	if config.NodeInternalIP.IsUnspecified() {
+	// Check what we should return, the iface name takes precedence, then the --internal-ip flag and otherwise use auto-detection
+	switch {
+	case config.NodeInternalIface != "":
+		ip, err := system.IPFromInterface(config.NodeInternalIface)
+		if err != nil {
+			errs = append(errs, err)
+			break
+		}
+		nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeInternalIP})
+
+	case config.NodeInternalIP.IsUnspecified(): // If specified IP is 0.0.0.0, return auto-detected internal IPs.
 		if len(internalIPs) == 0 {
 			errs = append(errs, fmt.Errorf("failed to auto-detect internal IP"))
-		} else {
-			for _, ip := range internalIPs {
-				nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeInternalIP})
-				config.NodeInternalIP = ip
-				// TODO(pires) check the argument below with sig-network.
-				// Exit loop early, because it seems only IP of this type is supported.
-				break
-			}
+			break
 		}
-		// Otherwise, return pre-defined internal IP.
-	} else {
+		for _, ip := range internalIPs {
+			nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeInternalIP})
+			config.NodeInternalIP = ip
+			// TODO(pires) check the argument below with sig-network.
+			// Exit loop early, because it seems only IP of this type is supported.
+			break
+		}
+
+	default: // Otherwise, return pre-defined internal IP.
 		nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: config.NodeInternalIP.String(), Type: corev1.NodeInternalIP})
 	}
 
-	// If specified IP is 0.0.0.0, return auto-detected external IPs.
-	if config.NodeExternalIP.IsUnspecified() {
+	// almost identical switch as above, but now for external addresses
+	switch {
+	case config.NodeExternalIface != "":
+		ip, err := system.IPFromInterface(config.NodeExternalIface)
+		if err != nil {
+			errs = append(errs, err)
+			break
+		}
+		nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeExternalIP})
+
+	case config.NodeExternalIP.IsUnspecified():
 		if len(externalIPs) == 0 {
 			errs = append(errs, fmt.Errorf("failed to auto-detect external IP"))
-		} else {
-			for _, ip := range externalIPs {
-				nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeExternalIP})
-				config.NodeExternalIP = ip
-				// TODO(pires) check the argument below with sig-network.
-				// Exit loop early, because it seems only IP of this type is supported.
-				break
-			}
+			break
 		}
-		// Otherwise, return pre-defined external IP.
-	} else {
+		for _, ip := range externalIPs {
+			nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: ip.String(), Type: corev1.NodeExternalIP})
+			config.NodeExternalIP = ip
+			// TODO(pires) check the argument below with sig-network.
+			// Exit loop early, because it seems only IP of this type is supported.
+			break
+		}
+
+	default:
 		nodeAddresses = append(nodeAddresses, corev1.NodeAddress{Address: config.NodeExternalIP.String(), Type: corev1.NodeExternalIP})
 	}
 
