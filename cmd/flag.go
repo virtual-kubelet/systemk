@@ -30,7 +30,8 @@ import (
 // where we tie systemk logging to klogv2 (see the imports).
 var log = vklogv2.New(nil)
 
-func installFlags(flags *pflag.FlagSet, c *provider.Opts) {
+// InstallFlags sets up the flags for the command.
+func InstallFlags(flags *pflag.FlagSet, c *provider.Opts) {
 	flags.StringVar(&c.KubeConfigPath, "kubeconfig", "", "cluster client configuration")
 	flags.StringVar(&c.KubeClusterDomain, "cluster-domain", provider.DefaultKubeClusterDomain, "cluster domain")
 	flags.StringVar(&c.NodeName, "nodename", "", "value to be set as the Node name and label node.k8s.io/hostname")

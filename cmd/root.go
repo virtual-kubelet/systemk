@@ -49,10 +49,6 @@ func NewRootCommand(ctx context.Context, name string, opts *provider.Opts) *cobr
 			return runRootCommand(ctx, opts)
 		},
 	}
-
-	// Setup flags.
-	installFlags(cmd.Flags(), opts)
-
 	return cmd
 }
 
