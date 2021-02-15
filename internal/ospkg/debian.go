@@ -38,7 +38,7 @@ func (p *DebianManager) Install(pkg, version string) (bool, error) {
 	installCmd := new(exec.Cmd)
 	switch {
 	case strings.HasPrefix(pkg, "https://"):
-		pkgToInstall, err := fetch(pkg[6:], "")
+		pkgToInstall, err := fetch(pkg, "")
 		if err != nil {
 			return false, err
 		}

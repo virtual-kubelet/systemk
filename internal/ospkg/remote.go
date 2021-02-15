@@ -18,7 +18,6 @@ func fetch(pkg, version string) (string, error) {
 	c := new(http.Client)
 	c.Timeout = 240 * time.Second
 
-	pkg = "https://" + pkg
 	log.Infof("fetching from %s", pkg)
 	resp, err := c.Get(pkg)
 	if err != nil {
