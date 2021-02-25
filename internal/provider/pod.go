@@ -230,7 +230,13 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 			uf = uf.Delete("Service", del)
 		}
 
-		for _, env := range p.defaultEnvironment() {
+		envVars := p.defaultEnvironment()
+		for _, env := range c.Env {
+			// If environment variable is a string with spaces, it must be quoted.
+			// Quoting seems innocuous to other strings so it's set by default.
+			envVars = append(envVars, fmt.Sprintf("%s=%q", env.Name, env.Value))
+		}
+		for _, env := range envVars {
 			uf = uf.Insert("Service", "Environment", env)
 		}
 

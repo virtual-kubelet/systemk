@@ -15,3 +15,6 @@ spec:
       image: /bin/bash
       command: ["/bin/bash", "-c"]
       args: ["while true; do date; sleep 5; done"]
+      env:
+        - name: OWNER
+          value: someone
