@@ -3,6 +3,7 @@ module github.com/virtual-kubelet/systemk
 go 1.16
 
 require (
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/gorilla/mux v1.7.3
 	github.com/pkg/errors v0.9.1
