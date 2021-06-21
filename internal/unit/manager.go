@@ -57,7 +57,7 @@ type manager struct {
 	mutex sync.RWMutex
 }
 
-// Asset manager fulfills Manager.
+// Assess manager fulfills the Manager interface.
 var _ Manager = (*manager)(nil)
 
 // NewManager returns an initialized dBus unit manager.
@@ -240,7 +240,7 @@ func (m *manager) States(prefix string) (map[string]*State, error) {
 
 func (m *manager) writeUnit(name string, contents string) error {
 	bContents := []byte(contents)
-	log.Infof("writing systemd unit %q:\n (%db)", name, len(bContents))
+	log.Infof("writing systemd unit %q (%dB written)", name, len(bContents))
 
 	ufPath := m.getUnitFilePath(name)
 	err := ioutil.WriteFile(ufPath, bContents, os.FileMode(0644))
