@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -39,7 +40,6 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 		WithField("podName", pod.Name)
 
 	vol := make(map[string]string)
-	id := string(pod.ObjectMeta.UID)
 	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
 	if err != nil {
 		return nil, err
@@ -59,16 +59,8 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll {
 				continue
 			}
-			dir := filepath.Join(varrun, id)
-			dir = filepath.Join(dir, emptyDir)
-			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
-				return nil, err
-			}
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
-				return nil, err
-			}
-			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
+			dir, err := p.setupPaths(pod, emptyDir, i)
+			if err != nil {
 				return nil, err
 			}
 			fnlog.Debugf("created %q for emptyDir %q", dir, v.Name)
@@ -86,16 +78,8 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, id)
-			dir = filepath.Join(dir, secretDir)
-			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
-				return nil, err
-			}
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
-				return nil, err
-			}
-			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
+			dir, err := p.setupPaths(pod, secretDir, i)
+			if err != nil {
 				return nil, err
 			}
 			fnlog.Debugf("created %q for secret %q", dir, v.Name)
@@ -128,16 +112,8 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 				continue
 			}
 
-			dir := filepath.Join(varrun, id)
-			dir = filepath.Join(dir, configmapDir)
-			if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
-				return nil, err
-			}
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
-				return nil, err
-			}
-			dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
-			if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
+			dir, err := p.setupPaths(pod, configmapDir, i)
+			if err != nil {
 				return nil, err
 			}
 			fnlog.Debugf("created %q for configmap %q", dir, v.Name)
@@ -153,6 +129,124 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 				}
 			}
 			vol[v.Name] = dir
+
+		case v.Projected != nil:
+			for _, source := range v.Projected.Sources {
+				switch {
+				case source.ServiceAccountToken != nil:
+					// This is still stored in a secret, hence the dance to figure out what secret.
+					secrets, err := p.podResourceManager.SecretLister().Secrets(pod.Namespace).List(labels.Everything())
+					if err != nil {
+						return nil, err
+					}
+				Secrets:
+					for _, secret := range secrets {
+						if secret.Type != corev1.SecretTypeServiceAccountToken {
+							continue
+						}
+						// annotation now needs to match the pod.ServiceAccountName
+						for k, a := range secret.ObjectMeta.Annotations {
+							if k == "kubernetes.io/service-account.name" && a == pod.Spec.ServiceAccountName {
+								// this is the secret we're after. Now the projected service account has a path element, which is the only path
+								// we want from this secret, but it could still be in StringData or Data
+								dir, err := p.setupPaths(pod, secretDir, i)
+								if err != nil {
+									return nil, err
+								}
+								fnlog.Debugf("created %q for projected serviceAccountToken (secret) %q", dir, v.Name)
+
+								for k, v := range secret.StringData {
+									data, err := base64.StdEncoding.DecodeString(string(v))
+									if err != nil {
+										return nil, err
+									}
+									if err := writeFile(dir, k, uid, gid, data); err != nil {
+										return nil, err
+									}
+								}
+								for k, v := range secret.Data {
+									if err := writeFile(dir, k, uid, gid, []byte(v)); err != nil {
+										return nil, err
+									}
+								}
+								vol[v.Name] = dir
+								break Secrets
+							}
+						}
+					}
+
+				case source.Secret != nil:
+					secret, err := p.podResourceManager.SecretLister().Secrets(pod.Namespace).Get(source.Secret.Name)
+					if source.Secret.Optional != nil && !*source.Secret.Optional && errors.IsNotFound(err) {
+						return nil, fmt.Errorf("projected secret %s is required by pod %s and does not exist", source.Secret.Name, pod.Name)
+					}
+					if secret == nil {
+						continue
+					}
+
+					dir, err := p.setupPaths(pod, secretDir, i)
+					if err != nil {
+						return nil, err
+					}
+					fnlog.Debugf("created %q for projected secret %q", dir, v.Name)
+
+					for _, keyToPath := range source.ConfigMap.Items {
+						for k, v := range secret.StringData {
+							if keyToPath.Key == k {
+								data, err := base64.StdEncoding.DecodeString(string(v))
+								if err != nil {
+									return nil, err
+								}
+								if err := writeFile(dir, keyToPath.Path, uid, gid, data); err != nil {
+									return nil, err
+								}
+							}
+						}
+						for k, v := range secret.Data {
+							if keyToPath.Key == k {
+								if err := writeFile(dir, keyToPath.Path, uid, gid, []byte(v)); err != nil {
+									return nil, err
+								}
+							}
+						}
+					}
+					vol[v.Name] = dir
+
+				case source.ConfigMap != nil:
+					configMap, err := p.podResourceManager.ConfigMapLister().ConfigMaps(pod.Namespace).Get(source.ConfigMap.Name)
+					if source.ConfigMap.Optional != nil && !*source.ConfigMap.Optional && errors.IsNotFound(err) {
+						return nil, fmt.Errorf("projected configMap %s is required by pod %s and does not exist", source.ConfigMap.Name, pod.Name)
+					}
+					if configMap == nil {
+						continue
+					}
+
+					dir, err := p.setupPaths(pod, configmapDir, i)
+					if err != nil {
+						return nil, err
+					}
+					fnlog.Debugf("created %q for projected configmap %q", dir, v.Name)
+
+					for _, keyToPath := range source.ConfigMap.Items {
+						for k, v := range configMap.Data {
+							if keyToPath.Key == k {
+								if err := writeFile(dir, keyToPath.Path, uid, gid, []byte(v)); err != nil {
+									return nil, err
+								}
+							}
+						}
+						for k, v := range configMap.BinaryData {
+							if keyToPath.Key == k {
+								if err := writeFile(dir, keyToPath.Path, uid, gid, v); err != nil {
+									return nil, err
+								}
+							}
+						}
+					}
+					vol[v.Name] = dir
+
+				}
+			}
 
 		default:
 			return nil, fmt.Errorf("pod %s requires volume %s which is of an unsupported type", pod.Name, v.Name)
@@ -257,6 +351,27 @@ func isBelow(dirs []string, path string) error {
 		}
 	}
 	return fmt.Errorf("path %q, doesn't fall under any paths in %s", path, dirs)
+}
+
+func (p *p) setupPaths(pod *corev1.Pod, path string, i int) (string, error) {
+	id := string(pod.ObjectMeta.UID)
+	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(varrun, id)
+	dir = filepath.Join(dir, path)
+	if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
+		return "", err
+	}
+	if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
+		return "", err
+	}
+	dir = filepath.Join(dir, fmt.Sprintf("#%d", i))
+	if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
+		return "", err
+	}
+	return dir, nil
 }
 
 const dirPerms = 02750
