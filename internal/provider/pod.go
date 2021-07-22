@@ -428,7 +428,7 @@ func podToUnitName(pod *corev1.Pod, containerName string) string {
 }
 
 func unitPrefix(namespace, podName string) string {
-	return prefix + separator + namespace + separator + podName
+	return prefix + separator + namespace + separator + podName + separator // last seperator needs to be here, otherwise we will be prefix matching the wrong units.
 }
 
 // Name returns <namespace>.<podname> from a well formed name.
