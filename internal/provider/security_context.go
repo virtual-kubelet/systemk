@@ -9,9 +9,12 @@ import (
 )
 
 // uidGidFromSecurityContext returns the uid and gid (as a string) from the SecurityContext.
-// If windowsOptions are set, the uid and gid *names* found there are returned. This takes
-// precedence over the values runAsUser and runAsGroup.
+// If windowsOptions are set, the uid and gid *names* found there are returned. If these users
+// can not be found on the system an error is returned. Every user must have a primary group, so
+// either uid and gid or both empty or both set.
+//
 // If the uid is found, but gid is not, the primary group for uid is searched and returned.
+// If no securityContext is found this returns the empty strings for uid and gid.
 func uidGidFromSecurityContext(pod *corev1.Pod, maproot int) (uid, gid string, err error) {
 	if pod.Spec.SecurityContext == nil {
 		return "", "", nil
@@ -51,7 +54,7 @@ func uidGidFromSecurityContext(pod *corev1.Pod, maproot int) (uid, gid string, e
 		mapuid := strconv.FormatInt(int64(maproot), 10)
 		u, err = user.LookupId(mapuid)
 		if err != nil {
-			return "", "", fmt.Errorf("MapRoot's UID %q, not found: %s", mapuid, err)
+			return "", "", fmt.Errorf("root override UID %q, not found: %s", mapuid, err)
 		}
 		uid = u.Uid
 		gid = u.Gid
