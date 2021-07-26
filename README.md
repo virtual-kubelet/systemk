@@ -60,10 +60,10 @@ Containers are also implemented.
 EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
 bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
 are read-only or read-write depending on settings. When configMaps and Secrets are mutated the new
-contents are updated on disk.
+contents are updated on disk. These directories are set up in
+`/var/run/{emptydirs, secrets, configmaps}`.
 
-Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
-being generated.
+Retrieving pod logs also works, but setting up TLS is not automated.
 
 Has been tested on:
 
@@ -148,11 +148,6 @@ spec:
 The primary group will be found by systemk and both a `User` and `Group` will be injected into the
 unit file. The files created on disk for the configMap/secrets/emptyDir will be made of the same
 user/group.
-
-### Restricting mount points
-
-You can restrict the allowed mounts points for the pod's volumes. By default mounts under "/var" are
-allowed, but this can be changed via the `--dir` or `-d` flag.
 
 ### Running Without Root Permissions
 
