@@ -25,10 +25,9 @@ func TestProviderPodSpecUnits(t *testing.T) {
 	p.pkgManager = &ospkg.NoopManager{}
 	p.unitManager, _ = unit.NewMockManager()
 	p.config = &Opts{
-		AllowedHostPaths: DefaultAllowedPaths,
-		NodeName:         "localhost",
-		NodeInternalIP:   []byte{192, 168, 1, 1},
-		NodeExternalIP:   []byte{172, 16, 0, 1},
+		NodeName:       "localhost",
+		NodeInternalIP: []byte{192, 168, 1, 1},
+		NodeExternalIP: []byte{172, 16, 0, 1},
 	}
 
 	p.podResourceManager = kubernetes.NewPodResourceWatcher(informers.NewSharedInformerFactory(nil, 0))

@@ -23,35 +23,3 @@ func TestMkdirAll(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-func TestIsBelowPath(t *testing.T) {
-	tests := []struct {
-		top   string
-		path  string
-		below bool
-	}{
-		{"/", "/tmp/x", true},
-		{"/", "/", false},
-		{"/tmp", "/", false},
-		{"/tmp/x", "/", false},
-	}
-	for i, tc := range tests {
-		ok := isBelowPath(tc.top, tc.path)
-		if ok != tc.below {
-			t.Errorf("test %d, expected %t, got %t", i, tc.below, ok)
-		}
-	}
-}
-func TestIsBelow(t *testing.T) {
-	if err := isBelow([]string{"/var", "/tmp"}, "/tmp/x"); err != nil {
-		t.Errorf("/tmp/x should be below /tmp")
-	}
-
-	if err := isBelow([]string{"/var", "/tmp"}, "/"); err == nil {
-		t.Errorf("/ should not be below /tmp or /var")
-	}
-
-	if err := isBelow([]string{"/var", "/tmp"}, "/var"); err == nil {
-		t.Errorf("/var should not be below /tmp or /var")
-	}
-}
