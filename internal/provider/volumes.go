@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -315,28 +314,6 @@ func cleanPodEphemeralVolumes(podId string) error {
 	return os.RemoveAll(podEphemeralVolumes)
 }
 
-// isBelowPath returns true if path is below top.
-func isBelowPath(top, path string) bool {
-	x, err := filepath.Rel(top, path)
-	if err != nil {
-		return false
-	}
-	if x == "." { // same level
-		return false
-	}
-	return !strings.Contains(x, "..")
-}
-
-// isBelowPath checks if path falls below any of the path in dirs.
-func isBelow(dirs []string, path string) error {
-	for _, d := range dirs {
-		if isBelowPath(d, path) {
-			return nil
-		}
-	}
-	return fmt.Errorf("path %q, doesn't fall under any paths in %s", path, dirs)
-}
-
 func (p *p) setupPaths(pod *corev1.Pod, path string, i int) (string, error) {
 	id := string(pod.ObjectMeta.UID)
 	uid, gid, err := uidGidFromSecurityContext(pod, p.config.OverrideRootUID)
@@ -345,9 +322,6 @@ func (p *p) setupPaths(pod *corev1.Pod, path string, i int) (string, error) {
 	}
 	dir := filepath.Join(varrun, id)
 	dir = filepath.Join(dir, path)
-	if err := isBelow(p.config.AllowedHostPaths, dir); err != nil {
-		return "", err
-	}
 	if err := mkdirAllChown(dir, dirPerms, uid, gid); err != nil {
 		return "", err
 	}

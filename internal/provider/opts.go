@@ -38,7 +38,6 @@ var (
 	DefaultTaintValue            = "systemk"
 	DefaultStreamIdleTimeout     = 30 * time.Second
 	DefaultStreamCreationTimeout = 30 * time.Second
-	DefaultAllowedPaths          = []string{"/var"}
 )
 
 // Opts stores all the configuration options.
@@ -64,9 +63,6 @@ type Opts struct {
 
 	// NodeExternalIface is the interface's name whose address to use for Node external IP.
 	NodeExternalIface string
-
-	// AllowedHostPaths is a list of host paths that are allowed to be mounted.
-	AllowedHostPaths []string
 
 	// KubeConfigPath is the path to the Kubernetes client configuration.
 	KubeConfigPath string
@@ -117,10 +113,6 @@ type Opts struct {
 // SetDefaultOpts sets default options for unset values of the passed in option struct.
 // Fields that are already set will not be modified.
 func SetDefaultOpts(opts *Opts) error {
-	if len(opts.AllowedHostPaths) == 0 {
-		opts.AllowedHostPaths = DefaultAllowedPaths
-	}
-
 	if opts.NodeName == "" {
 		// If flag isn't set, try environment but fallback to systemd.
 		opts.NodeName = getEnvOrDefault("HOSTNAME", system.Hostname())
@@ -163,10 +155,6 @@ func SetDefaultOpts(opts *Opts) error {
 
 	if opts.StreamCreationTimeout == 0 {
 		opts.StreamCreationTimeout = DefaultStreamCreationTimeout
-	}
-
-	if len(opts.AllowedHostPaths) == 0 {
-		opts.AllowedHostPaths = DefaultAllowedPaths
 	}
 
 	if opts.OverrideRootUID < 0 {

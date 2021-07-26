@@ -149,11 +149,6 @@ The primary group will be found by systemk and both a `User` and `Group` will be
 unit file. The files created on disk for the configMap/secrets/emptyDir will be made of the same
 user/group.
 
-### Restricting mount points
-
-You can restrict the allowed mounts points for the pod's volumes. By default mounts under "/var" are
-allowed, but this can be changed via the `--dir` or `-d` flag.
-
 ### Running Without Root Permissions
 
 This is not possible, the tiniest thing we need is `BindPaths` which is not allowed when not running
