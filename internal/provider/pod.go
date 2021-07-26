@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/user"
 	"strconv"
 	"strings"
@@ -119,41 +118,8 @@ func (p *p) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 				continue
 			}
 			bindmounts = append(bindmounts, fmt.Sprintf("%s:%s", dir, v.MountPath)) // SubPath, look at todo, filepath.Join?
-
-			// OK, so the v.MountPath will _exist_ on the system, as systemd will create it, BUT the permissions/ownership might be wrong
-			// We will chown the directory to the user/group of the security context, but the directory is created by systemd, when it
-			// performs the automount. We'll add ExecPreStart that chowns the directory, but only if it's empty, otherwise we might be
-			// messing with some system directory - this may still be the case when the dir is empty though. Because a StartExecPre to check
-			// this would be a shell script we make the check here:
-			// * create/chown if not exist
-			// * chown if empty dir
-			// * anything else don't touch: this likely makes the unit start, but then fail. (we may intercept this and return a decent message
-			//   so you can see this with events
-			//
-			_, err := os.Stat(v.MountPath)
-			if os.IsNotExist(err) {
-				fnlog.Debugf("creating %q", v.MountPath)
-				if err := os.MkdirAll(v.MountPath, dirPerms); err != nil {
-					return err // return err? This will be an event. TODO: tweak message
-				}
-				fnlog.Debugf("chowning %q", v.MountPath)
-				if err := chown(v.MountPath, uid, gid); err != nil {
-					return err
-				}
-			} else {
-				empty, err := isEmpty(v.MountPath)
-				if err != nil {
-					return err
-				}
-				if !empty {
-					fnlog.Debugf("directory %q is not empty, refusing to touch", v.MountPath)
-					break
-				}
-				fnlog.Debugf("chowning %q", v.MountPath)
-				if err := chown(v.MountPath, uid, gid); err != nil {
-					return err
-				}
-			}
+			// OK, so the v.MountPath will _exist_ on the system, as systemd will create it, permissions should not matter, as we
+			// only need this "hook" to mount the bindmount.
 		}
 
 		c.Image = ospkg.Clean(c.Image) // clean up the image if fetched with http(s)
