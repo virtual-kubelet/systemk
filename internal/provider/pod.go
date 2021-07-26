@@ -23,7 +23,8 @@ import (
 func (p *p) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	fnlog := log.WithField("podNamespace", namespace).WithField("podName", name)
 	fnlog.Debug("GetPod called")
-	stats, err := p.unitManager.States(unitPrefix(namespace, name))
+	unitprefix := unitPrefix(namespace, name) + separator // we need to closing dot here, otherwise will return update2, update3, when looking for update.
+	stats, err := p.unitManager.States(unitprefix)
 	if err != nil {
 		fnlog.Errorf("failed to retrieve systemd states respective to Pod: %s", err)
 		return nil, nil
