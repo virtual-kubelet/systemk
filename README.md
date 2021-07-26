@@ -60,10 +60,10 @@ Containers are also implemented.
 EmptyDir/configMap/hostPath and Secret are implemented, all, except hostPath, are backed by a
 bind-mount. The entire filesystem is made available, but read-only, paths declared as volumeMounts
 are read-only or read-write depending on settings. When configMaps and Secrets are mutated the new
-contents are updated on disk.
+contents are updated on disk. These directories are set up in
+`/var/run/{emptydirs, secrets, configmaps}`.
 
-Getting logs also works, but the UI for it could be better; this mostly due to TLS certificates not
-being generated.
+Retrieving pod logs also works, but setting up TLS is not automated.
 
 Has been tested on:
 

@@ -49,8 +49,8 @@ func (p *p) volumes(pod *corev1.Pod, which Volume) (map[string]string, error) {
 			if which != volumeAll {
 				continue
 			}
-			// should this be v.Path? We should make this writeable
-			// We should also check the allowed paths here. TODO(miek).
+
+			// v.Path should exist and be usuable by this pod. No checks are done here.
 			vol[v.Name] = ""
 
 		case v.EmptyDir != nil:
