@@ -105,8 +105,14 @@ func (p *p) toContainers(stats map[string]*unit.State) ([]corev1.Container, []co
 	keys := unitNames(stats)
 	var initContainers, containers []v1.Container
 	for _, k := range keys {
+		log.Debugf("looking at unit at: %q", k)
 		s := stats[k]
 		u, _ := unit.NewFile(s.UnitData)
+		if _, ok := u.Contents[kubernetesSection]; !ok {
+			log.Warnf("no [X-Kubernetes] section found in %q", k)
+			continue
+		}
+
 		container := v1.Container{
 			Name:      Container(k),
 			Image:     u.Contents[kubernetesSection]["Image"][0],

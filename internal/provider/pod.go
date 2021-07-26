@@ -282,11 +282,10 @@ func (p *p) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.P
 	return &pod.Status, nil
 }
 
-// getJournalReader returns the actual journal reader.
+// JournalReader returns the actual journal reader.
 // This is useful when an io.ReadCloser is not enough, eg we need Follow().
-//
-// TODO(pires) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
-func (p *p) getJournalReader(namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (*sdjournal.JournalReader, error) {
+func JournalReader(namespace, name, container string, logOpts nodeapi.ContainerLogOpts) (*sdjournal.JournalReader, error) {
+	// TODO(pires) show logs from the current Pod alone https://github.com/virtual-kubelet/systemk/issues/5#issuecomment-765278538
 	fnlog := log.
 		WithField("podNamespace", namespace).
 		WithField("podName", name).
