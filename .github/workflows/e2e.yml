@@ -1,0 +1,48 @@
+name: Go
+on: [push, pull_request]
+jobs:
+  build:
+    name: End to End Test
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Install systemd lib dependencies
+      run: |
+        sudo apt update
+        sudo apt install libsystemd-dev policyrcd-script-zg2
+
+    - name: systemk Build
+      run: |
+        go install
+        echo ~/go/bin >> $GITHUB_PATH
+
+    - name: Get k3s
+      run: |
+        mkdir ~/tmp
+        curl -s -L https://github.com/k3s-io/k3s/releases/download/v1.21.3%2Bk3s1/k3s > ~/tmp/k3s
+        chmod +x ~/tmp/k3s
+        echo ~/tmp >> $GITHUB_PATH
+
+    - name: Run k3s
+      run: |
+        k3s/k3s &
+        sleep 5
+
+    - name: Run systemk
+      run: |
+        sudo ~/go/bin/systemk --kubeconfig ~/.rancher/k3s/server/cred/admin.kubeconfig --disable-taint &
+        sleep 5
+
+    - name: systemk Test (e2e)
+      run: |
+        ps; pwd
+        cd e2e
+        go test -tags e2e -v

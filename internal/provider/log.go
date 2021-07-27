@@ -36,7 +36,7 @@ func (p *p) GetContainerLogsHandler(w http.ResponseWriter, r *http.Request) {
 		// Retrieve the actual systemd journal reader given:
 		// * it implements io.ReadCloser, and
 		// * exposes other functionality, like follow mode.
-		logsReader, err := p.getJournalReader(namespace, pod, container, opts)
+		logsReader, err := JournalReader(namespace, pod, container, opts)
 		if err != nil {
 			return errors.Wrap(err, "failed to get systemd journal logs reader")
 		}
